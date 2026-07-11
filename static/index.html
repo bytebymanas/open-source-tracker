@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Open Source Contribution Tracker — Leaderboard and contribution analytics for university students." />
+  <title>Open Source Contribution Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-container">
+      <div class="nav-brand">
+        <span class="brand-mark"></span>
+        <span class="brand-name">OS Tracker</span>
+        <span class="brand-tag">CUSoC 2026</span>
+      </div>
+      <div class="nav-links">
+        <a href="#leaderboard" class="nav-link active" id="nav-leaderboard">Leaderboard</a>
+        <a href="#profile" class="nav-link" id="nav-profile">Profile</a>
+      </div>
+      <div class="nav-status" id="api-status">
+        <span class="status-dot"></span>
+        <span class="status-text">Connecting...</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <main class="main" id="main">
+
+    <!-- ======================== LEADERBOARD VIEW ======================== -->
+    <section class="view active" id="view-leaderboard">
+
+      <div class="section-header">
+        <div>
+          <h1 class="section-title">Contribution Leaderboard</h1>
+          <p class="section-subtitle">Ranked by total contribution score across all tracked repositories.</p>
+        </div>
+        <div class="header-controls">
+          <div class="filter-group" id="period-filter">
+            <button class="filter-btn active" data-period="all_time">All Time</button>
+            <button class="filter-btn" data-period="this_month">This Month</button>
+            <button class="filter-btn" data-period="this_week">This Week</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats bar -->
+      <div class="stats-bar" id="stats-bar">
+        <div class="stat-card">
+          <span class="stat-value" id="stat-total-users">—</span>
+          <span class="stat-label">Contributors</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="stat-total-prs">—</span>
+          <span class="stat-label">Merged PRs</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="stat-total-issues">—</span>
+          <span class="stat-label">Issues Closed</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="stat-top-score">—</span>
+          <span class="stat-label">Top Score</span>
+        </div>
+      </div>
+
+      <!-- Leaderboard table -->
+      <div class="table-wrapper">
+        <div class="table-toolbar">
+          <span class="table-count" id="table-count">Loading...</span>
+          <div class="search-box">
+            <svg class="search-icon" viewBox="0 0 20 20" fill="none">
+              <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M13 13l3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            <input
+              type="text"
+              id="leaderboard-search"
+              class="search-input"
+              placeholder="Filter by username..."
+              autocomplete="off"
+            />
+          </div>
+        </div>
+
+        <table class="data-table" id="leaderboard-table">
+          <thead>
+            <tr>
+              <th class="col-rank">Rank</th>
+              <th class="col-user">Contributor</th>
+              <th class="col-score sortable active" data-sort="score">Score</th>
+              <th class="col-prs sortable" data-sort="prs">Merged PRs</th>
+              <th class="col-issues sortable" data-sort="issues">Issues</th>
+              <th class="col-reviews sortable" data-sort="reviews">Reviews</th>
+              <th class="col-action"></th>
+            </tr>
+          </thead>
+          <tbody id="leaderboard-body">
+            <!-- Populated by script.js -->
+            <tr class="skeleton-row"><td colspan="7"><div class="skeleton"></div></td></tr>
+            <tr class="skeleton-row"><td colspan="7"><div class="skeleton"></div></td></tr>
+            <tr class="skeleton-row"><td colspan="7"><div class="skeleton"></div></td></tr>
+            <tr class="skeleton-row"><td colspan="7"><div class="skeleton"></div></td></tr>
+          </tbody>
+        </table>
+
+        <div class="empty-state hidden" id="leaderboard-empty">
+          <div class="empty-icon">
+            <svg viewBox="0 0 48 48" fill="none">
+              <rect x="8" y="16" width="32" height="24" rx="2" stroke="currentColor" stroke-width="2"/>
+              <path d="M16 16V12a8 8 0 0116 0v4" stroke="currentColor" stroke-width="2"/>
+              <circle cx="24" cy="28" r="3" fill="currentColor"/>
+            </svg>
+          </div>
+          <p class="empty-title">No contributors yet</p>
+          <p class="empty-body">Search for a GitHub username below to add them to the leaderboard.</p>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ======================== PROFILE VIEW ======================== -->
+    <section class="view" id="view-profile">
+
+      <!-- Search -->
+      <div class="profile-search-wrap">
+        <div class="profile-search-box">
+          <label class="profile-search-label" for="profile-username-input">GitHub Username</label>
+          <div class="profile-search-row">
+            <input
+              type="text"
+              id="profile-username-input"
+              class="profile-search-input"
+              placeholder="e.g. bytebymanas"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <button class="btn-primary" id="profile-search-btn">
+              <svg viewBox="0 0 20 20" fill="none" class="btn-icon">
+                <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M13 13l3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+              Fetch Profile
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Profile card -->
+      <div class="profile-card hidden" id="profile-card">
+
+        <div class="profile-header">
+          <img class="profile-avatar" id="profile-avatar" src="" alt="Avatar" />
+          <div class="profile-meta">
+            <h2 class="profile-name" id="profile-name">—</h2>
+            <a class="profile-username" id="profile-username-link" href="#" target="_blank" rel="noopener">@username</a>
+            <span class="profile-repos" id="profile-repos">— public repos</span>
+          </div>
+          <div class="profile-score-badge">
+            <span class="score-badge-value" id="profile-total-score">0</span>
+            <span class="score-badge-label">Total Score</span>
+          </div>
+        </div>
+
+        <!-- Score breakdown -->
+        <div class="score-breakdown">
+          <div class="score-item">
+            <span class="score-item-value" id="profile-prs">0</span>
+            <span class="score-item-label">Merged PRs</span>
+            <span class="score-item-pts">×10 pts</span>
+          </div>
+          <div class="score-item">
+            <span class="score-item-value" id="profile-issues">0</span>
+            <span class="score-item-label">Issues Closed</span>
+            <span class="score-item-pts">×3 pts</span>
+          </div>
+          <div class="score-item">
+            <span class="score-item-value" id="profile-reviews">0</span>
+            <span class="score-item-label">Code Reviews</span>
+            <span class="score-item-pts">×5 pts</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Profile error -->
+      <div class="profile-error hidden" id="profile-error">
+        <p class="error-text" id="profile-error-msg">User not found.</p>
+      </div>
+
+      <!-- Profile loading -->
+      <div class="profile-loading hidden" id="profile-loading">
+        <div class="spinner"></div>
+        <p>Fetching from GitHub...</p>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <span>Open Source Contribution Tracker</span>
+      <span class="footer-sep">·</span>
+      <span>CUSoC 2026</span>
+      <span class="footer-sep">·</span>
+      <a href="https://github.com/bytebymanas/open-source-tracker" target="_blank" rel="noopener" class="footer-link">GitHub</a>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
