@@ -199,3 +199,141 @@ def rate_limit():
         return jsonify({"github_rate_limit": data}), 200
     except GitHubAPIError as e:
         return jsonify({"error": "github_api_error", "message": str(e)}), 503
+
+
+# ------------------------------------------------------------------
+# User contributions breakdown
+# ------------------------------------------------------------------
+
+@api.route("/user/<username>/contributions", methods=["GET"])
+def get_user_contributions(username):
+    """
+    Return a detailed list of contributions for a GitHub user with
+    individual scores applied per contribution.
+
+    Fetches merged PRs and closed issues from GitHub, runs each through
+    the scoring engine, and returns a scored, sorted list.
+
+    Args:
+        username (str): GitHub username from the URL path
+
+    Returns:
+        JSON: List of contributions with type, title, URL, and points
+    """
+    cache_key = f"contributions:{username}"
+    cached = default_cache.get(cache_key)
+    if cached:
+        return jsonify(cached), 200
+
+    # Check user exists
+    try:
+        profile = github.get_user(username)
+    except GitHubAPIError as e:
+        return jsonify({"error": "github_api_error", "message": str(e)}), 503
+
+    if profile is None:
+        return jsonify({"error": "not_found", "message": f"GitHub user '{username}' not found."}), 404
+
+    # Fetch PRs and issues
+    try:
+        prs    = github.get_merged_pull_requests(username)
+        issues = github.get_user_issues(username, state="closed")
+    except GitHubAPIError as e:
+        return jsonify({"error": "github_api_error", "message": str(e)}), 503
+
+    contributions = []
+
+    for pr in prs:
+        item = {
+            "github_id":  str(pr.get("id")),
+            "type":       "pull_request",
+            "is_merged":  True,
+            "is_first_contribution": False,
+            "title":      pr.get("title", ""),
+            "url":        pr.get("html_url", ""),
+            "repo":       pr.get("repository_url", "").split("/repos/")[-1],
+            "state":      "merged",
+        }
+        item["points"] = scorer.score_contribution(item)
+        contributions.append(item)
+
+    for issue in issues:
+        item = {
+            "github_id":  str(issue.get("id")),
+            "type":       "issue",
+            "is_merged":  False,
+            "is_first_contribution": False,
+            "title":      issue.get("title", ""),
+            "url":        issue.get("html_url", ""),
+            "repo":       issue.get("repository_url", "").split("/repos/")[-1],
+            "state":      issue.get("state", "closed"),
+        }
+        item["points"] = scorer.score_contribution(item)
+        contributions.append(item)
+
+    # Sort by points descending
+    contributions.sort(key=lambda x: x["points"], reverse=True)
+
+    response = {
+        "username":      username,
+        "total":         len(contributions),
+        "contributions": contributions,
+    }
+    default_cache.set(cache_key, response)
+    return jsonify(response), 200
+
+
+# ------------------------------------------------------------------
+# User repositories
+# ------------------------------------------------------------------
+
+@api.route("/user/<username>/repos", methods=["GET"])
+def get_user_repos(username):
+    """
+    Return a list of public repositories for a GitHub user.
+
+    Args:
+        username (str): GitHub username from the URL path
+
+    Returns:
+        JSON: List of repos with name, description, language, and URL
+    """
+    cache_key = f"repos:{username}"
+    cached = default_cache.get(cache_key)
+    if cached:
+        return jsonify(cached), 200
+
+    try:
+        profile = github.get_user(username)
+    except GitHubAPIError as e:
+        return jsonify({"error": "github_api_error", "message": str(e)}), 503
+
+    if profile is None:
+        return jsonify({"error": "not_found", "message": f"GitHub user '{username}' not found."}), 404
+
+    try:
+        raw_repos = github.get_user_repos(username)
+    except GitHubAPIError as e:
+        return jsonify({"error": "github_api_error", "message": str(e)}), 503
+
+    repos = [
+        {
+            "name":        r.get("name"),
+            "full_name":   r.get("full_name"),
+            "description": r.get("description") or "",
+            "language":    r.get("language") or "—",
+            "url":         r.get("html_url"),
+            "stars":       r.get("stargazers_count", 0),
+            "forks":       r.get("forks_count", 0),
+            "is_fork":     r.get("fork", False),
+        }
+        for r in raw_repos
+    ]
+
+    # Sort by stars descending
+    repos.sort(key=lambda x: x["stars"], reverse=True)
+
+    response = {"username": username, "total": len(repos), "repos": repos}
+    default_cache.set(cache_key, response)
+    return jsonify(response), 200
+
