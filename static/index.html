@@ -188,6 +188,48 @@
           </div>
         </div>
 
+        <!-- Contributions breakdown table -->
+        <div class="profile-section">
+          <div class="profile-section-header">
+            <h3 class="profile-section-title">Contributions</h3>
+            <span class="profile-section-count" id="contrib-count">—</span>
+          </div>
+          <div class="contrib-loading hidden" id="contrib-loading">
+            <div class="spinner spinner-sm"></div>
+            <span>Loading contributions...</span>
+          </div>
+          <table class="data-table profile-table hidden" id="contrib-table">
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Title</th>
+                <th>Repository</th>
+                <th>Points</th>
+              </tr>
+            </thead>
+            <tbody id="contrib-body"></tbody>
+          </table>
+          <div class="empty-state hidden" id="contrib-empty">
+            <p class="empty-body">No contributions found for this user.</p>
+          </div>
+        </div>
+
+        <!-- Repositories -->
+        <div class="profile-section">
+          <div class="profile-section-header">
+            <h3 class="profile-section-title">Repositories</h3>
+            <span class="profile-section-count" id="repos-count">—</span>
+          </div>
+          <div class="repos-loading hidden" id="repos-loading">
+            <div class="spinner spinner-sm"></div>
+            <span>Loading repositories...</span>
+          </div>
+          <div class="repos-grid hidden" id="repos-grid"></div>
+          <div class="empty-state hidden" id="repos-empty">
+            <p class="empty-body">No public repositories found.</p>
+          </div>
+        </div>
+
       </div>
 
       <!-- Profile error -->
