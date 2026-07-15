@@ -1,179 +1,336 @@
 """
-Unit tests for Flask API routes.
+Unit tests for Flask API routes (src/api/routes.py).
 
-Tests all HTTP endpoints defined in src/api/routes.py.
-Run with: python3 -m pytest tests/ -v
+All GitHub API calls are mocked using unittest.mock so tests run
+offline, instantly, and without consuming rate-limit quota.
 """
 
 import pytest
 import sys
 import os
+from unittest.mock import patch, MagicMock
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src.main import app
 
 
+# ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
+
 @pytest.fixture
 def client():
-    """Create a test client for the Flask app."""
-    app.config['TESTING'] = True
-    with app.test_client() as client:
-        yield client
+    """Flask test client with testing mode enabled."""
+    app.config["TESTING"] = True
+    with app.test_client() as c:
+        yield c
 
+
+MOCK_GITHUB_USER = {
+    "id": 12345,
+    "login": "bytebymanas",
+    "name": "Manas Chhabra",
+    "avatar_url": "https://avatars.githubusercontent.com/u/12345",
+    "public_repos": 10,
+}
+
+MOCK_PRS = [
+    {
+        "id": 1001,
+        "title": "Fix login bug",
+        "html_url": "https://github.com/test/repo/pull/1",
+        "repository_url": "https://api.github.com/repos/test/repo",
+    }
+]
+
+MOCK_ISSUES = [
+    {
+        "id": 2001,
+        "title": "Add dark mode",
+        "html_url": "https://github.com/test/repo/issues/1",
+        "repository_url": "https://api.github.com/repos/test/repo",
+        "state": "closed",
+    }
+]
+
+MOCK_REPOS = [
+    {
+        "name": "open-source-tracker",
+        "full_name": "bytebymanas/open-source-tracker",
+        "description": "OS contribution tracker",
+        "language": "Python",
+        "html_url": "https://github.com/bytebymanas/open-source-tracker",
+        "stargazers_count": 5,
+        "forks_count": 1,
+        "fork": False,
+    }
+]
+
+
+# ---------------------------------------------------------------------------
+# Helper: patch GitHubAPI methods for a single test
+# ---------------------------------------------------------------------------
+
+def _github_patches(user=MOCK_GITHUB_USER, prs=None, issues=None, repos=None):
+    """Return a dict of patches to apply for a typical mocked GitHub call."""
+    return {
+        "get_user":                 MagicMock(return_value=user),
+        "get_merged_pull_requests": MagicMock(return_value=prs or MOCK_PRS),
+        "get_user_issues":          MagicMock(return_value=issues or MOCK_ISSUES),
+        "get_user_repos":           MagicMock(return_value=repos or MOCK_REPOS),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Health
+# ---------------------------------------------------------------------------
 
 class TestHealthEndpoint:
-    """Tests for GET /api/health"""
 
-    def test_health_returns_200(self, client):
-        """Health endpoint should return HTTP 200."""
-        response = client.get('/api/health')
-        assert response.status_code == 200
+    def test_returns_200(self, client):
+        assert client.get("/api/health").status_code == 200
 
-    def test_health_returns_json(self, client):
-        """Health endpoint should return JSON."""
-        response = client.get('/api/health')
-        data = response.get_json()
-        assert data is not None
+    def test_returns_status_ok(self, client):
+        data = client.get("/api/health").get_json()
+        assert data["status"] == "ok"
 
-    def test_health_status_ok(self, client):
-        """Health endpoint should return status: ok."""
-        response = client.get('/api/health')
-        data = response.get_json()
-        assert data['status'] == 'ok'
 
+# ---------------------------------------------------------------------------
+# Home (serves index.html)
+# ---------------------------------------------------------------------------
 
 class TestHomeEndpoint:
-    """Tests for GET /"""
 
-    def test_home_returns_200(self, client):
-        """Home endpoint should return HTTP 200."""
-        response = client.get('/')
-        assert response.status_code == 200
+    def test_returns_200(self, client):
+        assert client.get("/").status_code == 200
 
+
+# ---------------------------------------------------------------------------
+# User profile
+# ---------------------------------------------------------------------------
 
 class TestUserEndpoint:
-    """Tests for GET /api/user/<username>"""
 
-    def test_user_endpoint_returns_200(self, client):
-        """User endpoint should return HTTP 200 for a known user."""
-        response = client.get('/api/user/bytebymanas')
-        assert response.status_code == 200
+    @patch("src.api.routes.github")
+    def test_returns_200_for_known_user(self, mock_gh, client):
+        mock_gh.get_user.return_value = MOCK_GITHUB_USER
+        mock_gh.get_merged_pull_requests.return_value = MOCK_PRS
+        mock_gh.get_user_issues.return_value = MOCK_ISSUES
+        res = client.get("/api/user/bytebymanas")
+        assert res.status_code == 200
 
-    def test_user_endpoint_returns_username(self, client):
-        """User endpoint should return the correct username in response."""
-        response = client.get('/api/user/bytebymanas')
-        data = response.get_json()
-        assert data['username'] == 'bytebymanas'
+    @patch("src.api.routes.github")
+    def test_response_contains_username(self, mock_gh, client):
+        mock_gh.get_user.return_value = MOCK_GITHUB_USER
+        mock_gh.get_merged_pull_requests.return_value = MOCK_PRS
+        mock_gh.get_user_issues.return_value = MOCK_ISSUES
+        data = client.get("/api/user/bytebymanas").get_json()
+        assert data["username"] == "bytebymanas"
 
-    def test_user_endpoint_returns_score(self, client):
-        """User endpoint should return a score object."""
-        response = client.get('/api/user/bytebymanas')
-        data = response.get_json()
-        assert 'score' in data
+    @patch("src.api.routes.github")
+    def test_response_contains_score(self, mock_gh, client):
+        mock_gh.get_user.return_value = MOCK_GITHUB_USER
+        mock_gh.get_merged_pull_requests.return_value = MOCK_PRS
+        mock_gh.get_user_issues.return_value = MOCK_ISSUES
+        data = client.get("/api/user/bytebymanas").get_json()
+        assert "score" in data
+        assert "total" in data["score"]
 
-    def test_user_endpoint_returns_404_for_unknown_user(self, client):
-        """User endpoint should return 404 for a nonexistent user."""
-        response = client.get('/api/user/this_user_does_not_exist_xyz_99999')
-        assert response.status_code == 404
+    @patch("src.api.routes.github")
+    def test_score_is_calculated_correctly(self, mock_gh, client):
+        """1 merged PR = 10pts, 1 closed issue = 3pts → total 13."""
+        mock_gh.get_user.return_value = MOCK_GITHUB_USER
+        mock_gh.get_merged_pull_requests.return_value = MOCK_PRS
+        mock_gh.get_user_issues.return_value = MOCK_ISSUES
+        data = client.get("/api/user/bytebymanas").get_json()
+        assert data["score"]["total"] == 13
 
+    @patch("src.api.routes.github")
+    def test_returns_404_for_unknown_user(self, mock_gh, client):
+        mock_gh.get_user.return_value = None
+        res = client.get("/api/user/nonexistent_user_xyz")
+        assert res.status_code == 404
+
+    @patch("src.api.routes.github")
+    def test_404_response_contains_error_key(self, mock_gh, client):
+        mock_gh.get_user.return_value = None
+        data = client.get("/api/user/nonexistent_user_xyz").get_json()
+        assert "error" in data
+
+
+# ---------------------------------------------------------------------------
+# Leaderboard
+# ---------------------------------------------------------------------------
 
 class TestLeaderboardEndpoint:
-    """Tests for GET /api/leaderboard"""
 
-    def test_leaderboard_returns_200(self, client):
-        """Leaderboard endpoint should return HTTP 200."""
-        response = client.get('/api/leaderboard')
-        assert response.status_code == 200
+    def test_returns_200(self, client):
+        assert client.get("/api/leaderboard").status_code == 200
 
-    def test_leaderboard_returns_list(self, client):
-        """Leaderboard endpoint should return a leaderboard list."""
-        response = client.get('/api/leaderboard')
-        data = response.get_json()
-        assert 'leaderboard' in data
-        assert isinstance(data['leaderboard'], list)
+    def test_returns_leaderboard_list(self, client):
+        data = client.get("/api/leaderboard").get_json()
+        assert "leaderboard" in data
+        assert isinstance(data["leaderboard"], list)
 
-    def test_leaderboard_accepts_period_param(self, client):
-        """Leaderboard endpoint should accept a period query param."""
-        response = client.get('/api/leaderboard?period=this_month')
-        assert response.status_code == 200
-        data = response.get_json()
-        assert data.get('period') == 'this_month'
+    def test_accepts_period_param(self, client):
+        data = client.get("/api/leaderboard?period=this_month").get_json()
+        assert data.get("period") == "this_month"
 
+    def test_accepts_limit_param(self, client):
+        res = client.get("/api/leaderboard?limit=5")
+        assert res.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# Contributions
+# ---------------------------------------------------------------------------
 
 class TestContributionsEndpoint:
-    """Tests for GET /api/user/<username>/contributions"""
 
-    def test_contributions_returns_200_for_valid_user(self, client):
-        """Contributions endpoint should return HTTP 200 for a known user."""
-        response = client.get('/api/user/bytebymanas/contributions')
-        assert response.status_code == 200
+    @patch("src.api.routes.github")
+    def test_returns_200_for_valid_user(self, mock_gh, client):
+        mock_gh.get_user.return_value = MOCK_GITHUB_USER
+        mock_gh.get_merged_pull_requests.return_value = MOCK_PRS
+        mock_gh.get_user_issues.return_value = MOCK_ISSUES
+        res = client.get("/api/user/bytebymanas/contributions")
+        assert res.status_code == 200
 
-    def test_contributions_response_has_required_keys(self, client):
-        """Response must contain username, total, and contributions keys."""
-        response = client.get('/api/user/bytebymanas/contributions')
-        data = response.get_json()
-        assert 'username' in data
-        assert 'total' in data
-        assert 'contributions' in data
+    @patch("src.api.routes.github")
+    def test_response_has_required_keys(self, mock_gh, client):
+        mock_gh.get_user.return_value = MOCK_GITHUB_USER
+        mock_gh.get_merged_pull_requests.return_value = MOCK_PRS
+        mock_gh.get_user_issues.return_value = MOCK_ISSUES
+        data = client.get("/api/user/bytebymanas/contributions").get_json()
+        assert "username" in data
+        assert "total" in data
+        assert "contributions" in data
 
-    def test_contributions_is_a_list(self, client):
-        """contributions field should be a list."""
-        response = client.get('/api/user/bytebymanas/contributions')
-        data = response.get_json()
-        assert isinstance(data['contributions'], list)
+    @patch("src.api.routes.github")
+    def test_contributions_is_list(self, mock_gh, client):
+        mock_gh.get_user.return_value = MOCK_GITHUB_USER
+        mock_gh.get_merged_pull_requests.return_value = MOCK_PRS
+        mock_gh.get_user_issues.return_value = MOCK_ISSUES
+        data = client.get("/api/user/bytebymanas/contributions").get_json()
+        assert isinstance(data["contributions"], list)
 
-    def test_contributions_returns_404_for_unknown_user(self, client):
-        """Contributions endpoint should return 404 for a nonexistent user."""
-        response = client.get('/api/user/this_user_does_not_exist_xyz_99999/contributions')
-        assert response.status_code == 404
+    @patch("src.api.routes.github")
+    def test_each_item_has_points(self, mock_gh, client):
+        mock_gh.get_user.return_value = MOCK_GITHUB_USER
+        mock_gh.get_merged_pull_requests.return_value = MOCK_PRS
+        mock_gh.get_user_issues.return_value = MOCK_ISSUES
+        data = client.get("/api/user/bytebymanas/contributions").get_json()
+        for item in data["contributions"]:
+            assert "points" in item
 
-    def test_each_contribution_has_points_field(self, client):
-        """Each contribution record should include a points field."""
-        response = client.get('/api/user/bytebymanas/contributions')
-        data = response.get_json()
-        for item in data['contributions']:
-            assert 'points' in item
+    @patch("src.api.routes.github")
+    def test_pr_earns_10_points(self, mock_gh, client):
+        mock_gh.get_user.return_value = MOCK_GITHUB_USER
+        mock_gh.get_merged_pull_requests.return_value = MOCK_PRS
+        mock_gh.get_user_issues.return_value = []
+        data = client.get("/api/user/bytebymanas/contributions").get_json()
+        pr_items = [c for c in data["contributions"] if c["type"] == "pull_request"]
+        assert all(item["points"] == 10 for item in pr_items)
 
-    def test_contributions_username_matches_request(self, client):
-        """Response username should match the requested username."""
-        response = client.get('/api/user/bytebymanas/contributions')
-        data = response.get_json()
-        assert data['username'] == 'bytebymanas'
+    @patch("src.api.routes.github")
+    def test_issue_earns_3_points(self, mock_gh, client):
+        mock_gh.get_user.return_value = MOCK_GITHUB_USER
+        mock_gh.get_merged_pull_requests.return_value = []
+        mock_gh.get_user_issues.return_value = MOCK_ISSUES
+        data = client.get("/api/user/bytebymanas/contributions").get_json()
+        issue_items = [c for c in data["contributions"] if c["type"] == "issue"]
+        assert all(item["points"] == 3 for item in issue_items)
 
+    @patch("src.api.routes.github")
+    def test_returns_404_for_unknown_user(self, mock_gh, client):
+        mock_gh.get_user.return_value = None
+        res = client.get("/api/user/nonexistent_xyz/contributions")
+        assert res.status_code == 404
+
+    @patch("src.api.routes.github")
+    def test_total_matches_list_length(self, mock_gh, client):
+        mock_gh.get_user.return_value = MOCK_GITHUB_USER
+        mock_gh.get_merged_pull_requests.return_value = MOCK_PRS
+        mock_gh.get_user_issues.return_value = MOCK_ISSUES
+        data = client.get("/api/user/bytebymanas/contributions").get_json()
+        assert data["total"] == len(data["contributions"])
+
+
+# ---------------------------------------------------------------------------
+# Repos
+# ---------------------------------------------------------------------------
 
 class TestReposEndpoint:
-    """Tests for GET /api/user/<username>/repos"""
 
-    def test_repos_returns_200_for_valid_user(self, client):
-        """Repos endpoint should return HTTP 200 for a known user."""
-        response = client.get('/api/user/bytebymanas/repos')
-        assert response.status_code == 200
+    @patch("src.api.routes.github")
+    def test_returns_200_for_valid_user(self, mock_gh, client):
+        mock_gh.get_user.return_value = MOCK_GITHUB_USER
+        mock_gh.get_user_repos.return_value = MOCK_REPOS
+        res = client.get("/api/user/bytebymanas/repos")
+        assert res.status_code == 200
 
-    def test_repos_response_has_required_keys(self, client):
-        """Response must contain username, total, and repos keys."""
-        response = client.get('/api/user/bytebymanas/repos')
-        data = response.get_json()
-        assert 'username' in data
-        assert 'total' in data
-        assert 'repos' in data
+    @patch("src.api.routes.github")
+    def test_response_has_required_keys(self, mock_gh, client):
+        mock_gh.get_user.return_value = MOCK_GITHUB_USER
+        mock_gh.get_user_repos.return_value = MOCK_REPOS
+        data = client.get("/api/user/bytebymanas/repos").get_json()
+        assert "username" in data
+        assert "total" in data
+        assert "repos" in data
 
-    def test_repos_is_a_list(self, client):
-        """repos field should be a list."""
-        response = client.get('/api/user/bytebymanas/repos')
-        data = response.get_json()
-        assert isinstance(data['repos'], list)
+    @patch("src.api.routes.github")
+    def test_repos_is_list(self, mock_gh, client):
+        mock_gh.get_user.return_value = MOCK_GITHUB_USER
+        mock_gh.get_user_repos.return_value = MOCK_REPOS
+        data = client.get("/api/user/bytebymanas/repos").get_json()
+        assert isinstance(data["repos"], list)
 
-    def test_repos_returns_404_for_unknown_user(self, client):
-        """Repos endpoint should return 404 for a nonexistent user."""
-        response = client.get('/api/user/this_user_does_not_exist_xyz_99999/repos')
-        assert response.status_code == 404
+    @patch("src.api.routes.github")
+    def test_each_repo_has_expected_fields(self, mock_gh, client):
+        mock_gh.get_user.return_value = MOCK_GITHUB_USER
+        mock_gh.get_user_repos.return_value = MOCK_REPOS
+        data = client.get("/api/user/bytebymanas/repos").get_json()
+        for repo in data["repos"]:
+            assert "name" in repo
+            assert "url" in repo
+            assert "language" in repo
 
-    def test_each_repo_has_expected_fields(self, client):
-        """Each repo record should include name, url, and language."""
-        response = client.get('/api/user/bytebymanas/repos')
-        data = response.get_json()
-        for repo in data['repos']:
-            assert 'name' in repo
-            assert 'url' in repo
-            assert 'language' in repo
+    @patch("src.api.routes.github")
+    def test_repos_sorted_by_stars(self, mock_gh, client):
+        from src.utils.cache import default_cache
+        default_cache.delete("repos:bytebymanas")
+
+        repos = [
+            {**MOCK_REPOS[0], "name": "low-stars",  "stargazers_count": 1, "full_name": "u/low"},
+            {**MOCK_REPOS[0], "name": "high-stars", "stargazers_count": 50, "full_name": "u/high"},
+        ]
+        mock_gh.get_user.return_value = MOCK_GITHUB_USER
+        mock_gh.get_user_repos.return_value = repos
+        data = client.get("/api/user/bytebymanas/repos").get_json()
+        assert data["repos"][0]["name"] == "high-stars"
+
+
+    @patch("src.api.routes.github")
+    def test_returns_404_for_unknown_user(self, mock_gh, client):
+        mock_gh.get_user.return_value = None
+        res = client.get("/api/user/nonexistent_xyz/repos")
+        assert res.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Rate limit
+# ---------------------------------------------------------------------------
+
+class TestRateLimitEndpoint:
+
+    @patch("src.api.routes.github")
+    def test_returns_200(self, mock_gh, client):
+        mock_gh.get_rate_limit.return_value = {"remaining": 55, "limit": 60}
+        res = client.get("/api/ratelimit")
+        assert res.status_code == 200
+
+    @patch("src.api.routes.github")
+    def test_response_has_github_rate_limit_key(self, mock_gh, client):
+        mock_gh.get_rate_limit.return_value = {"remaining": 55, "limit": 60}
+        data = client.get("/api/ratelimit").get_json()
+        assert "github_rate_limit" in data
