@@ -6,8 +6,13 @@ Run with: PYTHONPATH=. python3 src/main.py
 """
 
 import os
+from dotenv import load_dotenv
 from flask import Flask, send_from_directory
 from src.api.routes import api
+
+# Load environment variables from .env if present
+load_dotenv()
+
 
 # Point Flask to the project root's static/ folder
 STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
