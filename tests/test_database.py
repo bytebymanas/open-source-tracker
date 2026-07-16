@@ -134,3 +134,27 @@ class TestScoreOperations:
         board = db.get_leaderboard()
         assert board[0]["github_username"] == "user_high"
         assert board[1]["github_username"] == "user_low"
+
+class TestMentorAnnotations:
+    """Tests for mentor annotation operations."""
+
+    def test_add_annotation_returns_id(self, db):
+        """add_annotation() should insert a record and return its ID."""
+        user_id = db.upsert_user("testuser")
+        contrib_id = db.upsert_contribution(user_id, "pr_123", "pull_request")
+        ann_id = db.add_annotation(contrib_id, "mentor_alice", note="Great work!", verified=1)
+        assert isinstance(ann_id, int)
+        assert ann_id > 0
+
+    def test_get_annotations_for_contribution(self, db):
+        """get_annotations_for_contribution() should retrieve annotations correctly."""
+        user_id = db.upsert_user("testuser")
+        contrib_id = db.upsert_contribution(user_id, "pr_456", "issue")
+        db.add_annotation(contrib_id, "mentor_bob", note="Needs tests", verified=0, score_override=2)
+        
+        annotations = db.get_annotations_for_contribution(contrib_id)
+        assert len(annotations) == 1
+        assert annotations[0]["mentor_username"] == "mentor_bob"
+        assert annotations[0]["note"] == "Needs tests"
+        assert annotations[0]["verified"] == 0
+        assert annotations[0]["score_override"] == 2

@@ -329,3 +329,33 @@ class Database:
         with self._connect() as conn:
             rows = conn.execute(sql, (period, limit)).fetchall()
             return [dict(r) for r in rows]
+
+    # ------------------------------------------------------------------
+    # Mentor Annotations
+    # ------------------------------------------------------------------
+
+    def add_annotation(self, contribution_id, mentor_username, note=None, verified=0, score_override=None):
+        """
+        Add or update a mentor annotation for a specific contribution.
+        """
+        sql = """
+        INSERT INTO mentor_annotations (contribution_id, mentor_username, note, verified, score_override)
+        VALUES (?, ?, ?, ?, ?)
+        """
+        conn = self._connect()
+        try:
+            cursor = conn.execute(sql, (contribution_id, mentor_username, note, verified, score_override))
+            conn.commit()
+            return cursor.lastrowid
+        finally:
+            if self._conn is None:
+                conn.close()
+
+    def get_annotations_for_contribution(self, contribution_id):
+        """
+        Get all annotations for a specific contribution.
+        """
+        sql = "SELECT * FROM mentor_annotations WHERE contribution_id = ? ORDER BY annotated_at DESC"
+        with self._connect() as conn:
+            rows = conn.execute(sql, (contribution_id,)).fetchall()
+            return [dict(r) for r in rows]
