@@ -156,7 +156,22 @@ def get_leaderboard():
         JSON: Ranked list of users with scores
     """
     period = request.args.get("period", "all_time")
-    limit = int(request.args.get("limit", 50))
+    valid_periods = {"all_time", "this_month", "this_week"}
+    if period not in valid_periods:
+        return jsonify({
+            "error": "invalid_param",
+            "message": f"period must be one of: {', '.join(sorted(valid_periods))}",
+        }), 400
+
+    try:
+        limit = int(request.args.get("limit", 50))
+        if limit < 1 or limit > 200:
+            raise ValueError
+    except (ValueError, TypeError):
+        return jsonify({
+            "error": "invalid_param",
+            "message": "limit must be an integer between 1 and 200",
+        }), 400
 
     cache_key = f"leaderboard:{period}:{limit}"
     cached = default_cache.get(cache_key)
@@ -180,6 +195,7 @@ def get_leaderboard():
     response = {"period": period, "leaderboard": ranked}
     default_cache.set(cache_key, response)
     return jsonify(response), 200
+
 
 
 # ------------------------------------------------------------------
@@ -337,3 +353,50 @@ def get_user_repos(username):
     default_cache.set(cache_key, response)
     return jsonify(response), 200
 
+# ------------------------------------------------------------------
+# Mentor Annotations
+# ------------------------------------------------------------------
+
+@api.route("/contributions/<int:contribution_id>/annotations", methods=["GET"])
+def get_annotations(contribution_id):
+    """
+    Get all mentor annotations for a specific contribution.
+    """
+    annotations = db.get_annotations_for_contribution(contribution_id)
+    return jsonify({"contribution_id": contribution_id, "annotations": annotations}), 200
+
+@api.route("/contributions/<int:contribution_id>/annotations", methods=["POST"])
+def add_annotation(contribution_id):
+    """
+    Add a mentor annotation to a specific contribution.
+    Requires JSON payload: { "mentor_username": str, "note": str (optional), "verified": int (0 or 1), "score_override": int (optional) }
+    """
+    data = request.get_json()
+    if not data or "mentor_username" not in data:
+        return jsonify({"error": "invalid_payload", "message": "mentor_username is required"}), 400
+    
+    mentor_username = data["mentor_username"]
+    note = data.get("note")
+    
+    try:
+        verified = int(data.get("verified", 0))
+        score_override = data.get("score_override")
+        if score_override is not None:
+            score_override = int(score_override)
+    except (ValueError, TypeError):
+        return jsonify({"error": "invalid_payload", "message": "verified and score_override must be integers"}), 400
+
+    # Optional: We could verify if the contribution_id actually exists in the DB first.
+    # For now we'll let it fail at DB constraint level if it doesn't.
+    try:
+        annotation_id = db.add_annotation(
+            contribution_id=contribution_id,
+            mentor_username=mentor_username,
+            note=note,
+            verified=verified,
+            score_override=score_override
+        )
+    except Exception as e:
+        return jsonify({"error": "db_error", "message": str(e)}), 500
+        
+    return jsonify({"success": True, "annotation_id": annotation_id}), 201

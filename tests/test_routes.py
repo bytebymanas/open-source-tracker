@@ -334,3 +334,39 @@ class TestRateLimitEndpoint:
         mock_gh.get_rate_limit.return_value = {"remaining": 55, "limit": 60}
         data = client.get("/api/ratelimit").get_json()
         assert "github_rate_limit" in data
+
+# ---------------------------------------------------------------------------
+# Mentor Annotations
+# ---------------------------------------------------------------------------
+
+class TestMentorAnnotationsEndpoint:
+    
+    @patch("src.api.routes.db")
+    def test_get_annotations(self, mock_db, client):
+        mock_db.get_annotations_for_contribution.return_value = [
+            {"id": 1, "mentor_username": "test_mentor", "note": "good job"}
+        ]
+        res = client.get("/api/contributions/1/annotations")
+        assert res.status_code == 200
+        data = res.get_json()
+        assert "annotations" in data
+        assert len(data["annotations"]) == 1
+        assert data["annotations"][0]["mentor_username"] == "test_mentor"
+
+    @patch("src.api.routes.db")
+    def test_add_annotation_success(self, mock_db, client):
+        mock_db.add_annotation.return_value = 1
+        payload = {
+            "mentor_username": "mentor1",
+            "note": "Needs review",
+            "verified": 0
+        }
+        res = client.post("/api/contributions/100/annotations", json=payload)
+        assert res.status_code == 201
+        assert res.get_json()["annotation_id"] == 1
+
+    def test_add_annotation_missing_username(self, client):
+        payload = {"note": "missing mentor name"}
+        res = client.post("/api/contributions/100/annotations", json=payload)
+        assert res.status_code == 400
+        assert res.get_json()["error"] == "invalid_payload"
