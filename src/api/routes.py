@@ -9,7 +9,10 @@ All responses are JSON. Errors follow the format:
     {"error": "code", "message": "Human-readable description"}
 """
 
-from flask import Blueprint, jsonify, request
+import csv
+import io
+import json as _json
+from flask import Blueprint, jsonify, request, Response
 from src.api.github_api import GitHubAPI, GitHubAPIError
 from src.models.database import Database
 from src.utils.scoring import ScoringEngine
@@ -400,3 +403,93 @@ def add_annotation(contribution_id):
         return jsonify({"error": "db_error", "message": str(e)}), 500
         
     return jsonify({"success": True, "annotation_id": annotation_id}), 201
+
+
+# ------------------------------------------------------------------
+# Export
+# ------------------------------------------------------------------
+
+@api.route("/leaderboard/export", methods=["GET"])
+def export_leaderboard():
+    """
+    Export the leaderboard as a downloadable CSV or JSON file.
+
+    Query parameters:
+        period (str): 'all_time' (default), 'this_month', or 'this_week'
+        limit (int): Max entries to return (default 200)
+        format (str): 'csv' (default) or 'json'
+
+    Returns:
+        File download: Leaderboard data in the requested format
+    """
+    period = request.args.get("period", "all_time")
+    valid_periods = {"all_time", "this_month", "this_week"}
+    if period not in valid_periods:
+        return jsonify({
+            "error": "invalid_param",
+            "message": f"period must be one of: {', '.join(sorted(valid_periods))}",
+        }), 400
+
+    try:
+        limit = int(request.args.get("limit", 200))
+        if limit < 1 or limit > 1000:
+            raise ValueError
+    except (ValueError, TypeError):
+        return jsonify({
+            "error": "invalid_param",
+            "message": "limit must be an integer between 1 and 1000",
+        }), 400
+
+    fmt = request.args.get("format", "csv").lower()
+    if fmt not in {"csv", "json"}:
+        return jsonify({
+            "error": "invalid_param",
+            "message": "format must be 'csv' or 'json'",
+        }), 400
+
+    board = db.get_leaderboard(period=period, limit=limit)
+    ranked = []
+    for i, entry in enumerate(board, start=1):
+        ranked.append({
+            "rank": i,
+            "username": entry["github_username"],
+            "name": entry.get("name") or "",
+            "department": entry.get("department") or "",
+            "total_score": entry["total_score"],
+            "merged_prs": entry["pr_count"],
+            "issues_closed": entry["issue_count"],
+            "reviews": entry["review_count"],
+        })
+
+    filename_period = period.replace("_", "-")
+
+    if fmt == "json":
+        payload = _json.dumps(
+            {"period": period, "leaderboard": ranked},
+            indent=2
+        )
+        return Response(
+            payload,
+            mimetype="application/json",
+            headers={
+                "Content-Disposition": f"attachment; filename=leaderboard-{filename_period}.json"
+            },
+        )
+
+    # CSV
+    fields = ["rank", "username", "name", "department", "total_score",
+              "merged_prs", "issues_closed", "reviews"]
+    buf = io.StringIO()
+    writer = csv.DictWriter(buf, fieldnames=fields)
+    writer.writeheader()
+    writer.writerows(ranked)
+    csv_content = buf.getvalue()
+
+    return Response(
+        csv_content,
+        mimetype="text/csv",
+        headers={
+            "Content-Disposition": f"attachment; filename=leaderboard-{filename_period}.csv"
+        },
+    )
+
