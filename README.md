@@ -9,7 +9,7 @@ A web application that aggregates, scores, and visualizes open-source contributi
 
 Universities and student communities lack a structured way to track open-source contributions, recognize high-impact contributors, and verify contribution quality at scale. This project solves that by building a centralized platform that pulls contribution data from GitHub, applies a scoring algorithm, and displays ranked leaderboards for departments and individuals.
 
-**Status:** Week 1 — Planning & Setup  
+**Status:** Week 3 — Testing, Export & Polish  
 **Maintainer:** Manas Chhabra  
 **License:** MIT
 
@@ -121,10 +121,16 @@ The server will start at `http://localhost:5000`.
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
-| GET | `/` | Home page |
+| GET | `/` | Home page (serves frontend) |
 | GET | `/api/health` | Server health check |
-| GET | `/api/user/<username>` | Fetch user contribution data *(Week 2)* |
-| GET | `/api/leaderboard` | Get ranked leaderboard *(Week 3)* |
+| GET | `/api/user/<username>` | Fetch user profile, score & persist to DB |
+| GET | `/api/user/<username>/contributions` | Detailed scored contribution list |
+| GET | `/api/user/<username>/repos` | Public repositories (sorted by stars) |
+| GET | `/api/leaderboard` | Ranked leaderboard (`period`, `limit` params) |
+| GET | `/api/leaderboard/export` | Download leaderboard as CSV or JSON |
+| GET | `/api/ratelimit` | GitHub API rate limit status |
+| GET | `/api/contributions/<id>/annotations` | Get mentor annotations for a contribution |
+| POST | `/api/contributions/<id>/annotations` | Add mentor annotation to a contribution |
 
 Full API reference: [docs/API.md](docs/API.md)
 
@@ -136,7 +142,7 @@ Full API reference: [docs/API.md](docs/API.md)
 python3 -m pytest tests/ -v
 ```
 
-Expected output: **12 tests passing** (Week 1 skeleton).
+Expected output: **112+ tests passing** across 6 test files.
 
 ---
 
@@ -157,12 +163,12 @@ Contributions are scored using weighted values:
 
 ## Development Timeline
 
-| Week | Focus |
-| :--- | :--- |
-| Week 1 | Planning, setup, documentation, skeleton |
-| Week 2 | GitHub API integration, database schema, scoring logic |
-| Week 3 | Frontend (leaderboard, profiles), comprehensive testing |
-| Week 4 | Deployment, rate-limit handling, final documentation |
+| Week | Focus | Status |
+| :--- | :--- | :--- |
+| Week 1 | Planning, setup, documentation, skeleton | ✅ Complete |
+| Week 2 | GitHub API integration, database schema, scoring logic, full frontend | ✅ Complete |
+| Week 3 | Export functionality, comprehensive testing (101+ tests), doc updates | 🔄 In Progress |
+| Week 4 | Deployment, rate-limit retry, PostgreSQL, final documentation | ⬜ Upcoming |
 
 ---
 
