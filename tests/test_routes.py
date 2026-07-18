@@ -370,3 +370,102 @@ class TestMentorAnnotationsEndpoint:
         res = client.post("/api/contributions/100/annotations", json=payload)
         assert res.status_code == 400
         assert res.get_json()["error"] == "invalid_payload"
+
+
+class TestExportEndpoint:
+    """Tests for GET /api/leaderboard/export."""
+
+    @patch("src.api.routes.db")
+    def test_csv_export_returns_200(self, mock_db, client):
+        """Export with default (CSV) format should return 200."""
+        mock_db.get_leaderboard.return_value = []
+        res = client.get("/api/leaderboard/export")
+        assert res.status_code == 200
+
+    @patch("src.api.routes.db")
+    def test_csv_export_content_type(self, mock_db, client):
+        """CSV export should return text/csv content type."""
+        mock_db.get_leaderboard.return_value = []
+        res = client.get("/api/leaderboard/export?format=csv")
+        assert "text/csv" in res.content_type
+
+    @patch("src.api.routes.db")
+    def test_csv_export_has_header_row(self, mock_db, client):
+        """CSV response should contain expected column headers."""
+        mock_db.get_leaderboard.return_value = []
+        res = client.get("/api/leaderboard/export?format=csv")
+        text = res.data.decode("utf-8")
+        assert "rank" in text
+        assert "username" in text
+        assert "total_score" in text
+
+    @patch("src.api.routes.db")
+    def test_csv_export_contains_data_rows(self, mock_db, client):
+        """CSV export should include one row per leaderboard entry."""
+        mock_db.get_leaderboard.return_value = [
+            {
+                "github_username": "user_a",
+                "name": "User A",
+                "department": "CS",
+                "total_score": 30,
+                "pr_count": 3,
+                "issue_count": 0,
+                "review_count": 0,
+            }
+        ]
+        res = client.get("/api/leaderboard/export?format=csv")
+        text = res.data.decode("utf-8")
+        assert "user_a" in text
+        assert "30" in text
+
+    @patch("src.api.routes.db")
+    def test_csv_export_content_disposition(self, mock_db, client):
+        """CSV export should set a Content-Disposition attachment header."""
+        mock_db.get_leaderboard.return_value = []
+        res = client.get("/api/leaderboard/export?format=csv")
+        assert "attachment" in res.headers.get("Content-Disposition", "")
+        assert ".csv" in res.headers.get("Content-Disposition", "")
+
+    @patch("src.api.routes.db")
+    def test_json_export_returns_200(self, mock_db, client):
+        """JSON export should return 200."""
+        mock_db.get_leaderboard.return_value = []
+        res = client.get("/api/leaderboard/export?format=json")
+        assert res.status_code == 200
+
+    @patch("src.api.routes.db")
+    def test_json_export_content_disposition(self, mock_db, client):
+        """JSON export should set a Content-Disposition attachment header with .json."""
+        mock_db.get_leaderboard.return_value = []
+        res = client.get("/api/leaderboard/export?format=json")
+        disp = res.headers.get("Content-Disposition", "")
+        assert "attachment" in disp
+        assert ".json" in disp
+
+    @patch("src.api.routes.db")
+    def test_json_export_leaderboard_key(self, mock_db, client):
+        """JSON export body should contain a 'leaderboard' key."""
+        mock_db.get_leaderboard.return_value = []
+        res = client.get("/api/leaderboard/export?format=json")
+        import json
+        body = json.loads(res.data.decode("utf-8"))
+        assert "leaderboard" in body
+
+    def test_export_invalid_format(self, client):
+        """Unsupported format should return 400."""
+        res = client.get("/api/leaderboard/export?format=xml")
+        assert res.status_code == 400
+        assert res.get_json()["error"] == "invalid_param"
+
+    def test_export_invalid_period(self, client):
+        """Invalid period should return 400."""
+        res = client.get("/api/leaderboard/export?period=last_year")
+        assert res.status_code == 400
+        assert res.get_json()["error"] == "invalid_param"
+
+    def test_export_invalid_limit(self, client):
+        """Non-integer limit should return 400."""
+        res = client.get("/api/leaderboard/export?limit=abc")
+        assert res.status_code == 400
+        assert res.get_json()["error"] == "invalid_param"
+
