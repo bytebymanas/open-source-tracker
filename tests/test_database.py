@@ -135,6 +135,73 @@ class TestScoreOperations:
         assert board[0]["github_username"] == "user_high"
         assert board[1]["github_username"] == "user_low"
 
+    def test_leaderboard_department_filter_returns_only_matching(self, db):
+        """Passing department should exclude users from other departments."""
+        uid_cs = db.upsert_user("cs_user", department="CS")
+        uid_ee = db.upsert_user("ee_user", department="EE")
+        db.upsert_score(uid_cs, total_score=20)
+        db.upsert_score(uid_ee, total_score=30)
+        board = db.get_leaderboard(department="CS")
+        usernames = [e["github_username"] for e in board]
+        assert "cs_user" in usernames
+        assert "ee_user" not in usernames
+
+    def test_leaderboard_department_filter_is_case_insensitive(self, db):
+        """Department filter should match regardless of case."""
+        uid = db.upsert_user("cs_user2", department="Computer Science")
+        db.upsert_score(uid, total_score=15)
+        board_lower = db.get_leaderboard(department="computer science")
+        board_upper = db.get_leaderboard(department="COMPUTER SCIENCE")
+        assert any(e["github_username"] == "cs_user2" for e in board_lower)
+        assert any(e["github_username"] == "cs_user2" for e in board_upper)
+
+    def test_leaderboard_no_department_filter_returns_all(self, db):
+        """Omitting department should return users from all departments."""
+        uid1 = db.upsert_user("dept_a_user", department="A")
+        uid2 = db.upsert_user("dept_b_user", department="B")
+        db.upsert_score(uid1, total_score=10)
+        db.upsert_score(uid2, total_score=20)
+        board = db.get_leaderboard()
+        usernames = [e["github_username"] for e in board]
+        assert "dept_a_user" in usernames
+        assert "dept_b_user" in usernames
+
+
+class TestGetDepartments:
+    """Tests for get_departments()."""
+
+    def test_returns_list(self, db):
+        """get_departments() should always return a list."""
+        assert isinstance(db.get_departments(), list)
+
+    def test_returns_known_departments(self, db):
+        """Departments set on users should appear in the result."""
+        db.upsert_user("u1", department="CS")
+        db.upsert_user("u2", department="EE")
+        depts = db.get_departments()
+        assert "CS" in depts
+        assert "EE" in depts
+
+    def test_excludes_null_department(self, db):
+        """Users without a department should not contribute a None entry."""
+        db.upsert_user("no_dept_user")
+        depts = db.get_departments()
+        assert None not in depts
+
+    def test_no_duplicates(self, db):
+        """Each department should appear only once even with multiple users."""
+        db.upsert_user("ua", department="CS")
+        db.upsert_user("ub", department="CS")
+        depts = db.get_departments()
+        assert depts.count("CS") == 1
+
+    def test_result_is_sorted(self, db):
+        """Department list should be in alphabetical order."""
+        db.upsert_user("uz", department="Zoology")
+        db.upsert_user("ua", department="Archaeology")
+        depts = db.get_departments()
+        assert depts == sorted(depts)
+
 class TestMentorAnnotations:
     """Tests for mentor annotation operations."""
 

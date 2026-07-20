@@ -298,18 +298,27 @@ class Database:
             conn.execute(sql, (user_id, total_score, pr_count, issue_count, review_count, commit_count, period, now))
             conn.commit()
 
-    def get_leaderboard(self, period="all_time", limit=50):
+    def get_leaderboard(self, period="all_time", limit=50, department=None):
         """
         Fetch the ranked leaderboard for a given period.
 
         Args:
             period (str): 'all_time', 'this_month', or 'this_week'
             limit (int): Maximum number of results to return
+            department (str | None): If provided, restrict results to users
+                whose department matches this value (case-insensitive).
 
         Returns:
             list[dict]: Ranked list of users with scores
         """
-        sql = """
+        params = [period]
+        dept_clause = ""
+        if department:
+            dept_clause = "AND lower(u.department) = lower(?)"
+            params.append(department)
+        params.append(limit)
+
+        sql = f"""
         SELECT
             u.github_username,
             u.name,
@@ -322,13 +331,34 @@ class Database:
             s.calculated_at
         FROM scores s
         JOIN users u ON u.id = s.user_id
-        WHERE s.period = ? AND u.is_active = 1
+        WHERE s.period = ? AND u.is_active = 1 {dept_clause}
         ORDER BY s.total_score DESC
         LIMIT ?
         """
         with self._connect() as conn:
-            rows = conn.execute(sql, (period, limit)).fetchall()
+            rows = conn.execute(sql, params).fetchall()
             return [dict(r) for r in rows]
+
+    def get_departments(self):
+        """
+        Return a sorted list of distinct department names from active users.
+
+        Null or blank department values are excluded.
+
+        Returns:
+            list[str]: Sorted list of department names
+        """
+        sql = """
+        SELECT DISTINCT department
+        FROM users
+        WHERE is_active = 1
+          AND department IS NOT NULL
+          AND trim(department) != ''
+        ORDER BY department
+        """
+        with self._connect() as conn:
+            rows = conn.execute(sql).fetchall()
+            return [row["department"] for row in rows]
 
     # ------------------------------------------------------------------
     # Mentor Annotations
