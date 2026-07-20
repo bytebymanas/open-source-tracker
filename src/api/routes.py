@@ -146,6 +146,21 @@ def get_user(username):
 # Leaderboard
 # ------------------------------------------------------------------
 
+@api.route("/departments", methods=["GET"])
+def get_departments():
+    """
+    Return the sorted list of distinct department names across active users.
+
+    Useful for populating filter dropdowns in the frontend without
+    hard-coding department values.
+
+    Returns:
+        JSON: {"departments": ["CS", "EE", ...]}
+    """
+    depts = db.get_departments()
+    return jsonify({"departments": depts}), 200
+
+
 @api.route("/leaderboard", methods=["GET"])
 def get_leaderboard():
     """
@@ -153,7 +168,8 @@ def get_leaderboard():
 
     Query parameters:
         period (str): 'all_time' (default), 'this_month', or 'this_week'
-        limit (int): Max entries to return (default 50)
+        limit (int): Max entries to return (default 50, max 200)
+        department (str): Optional department name to filter results
 
     Returns:
         JSON: Ranked list of users with scores
@@ -176,12 +192,14 @@ def get_leaderboard():
             "message": "limit must be an integer between 1 and 200",
         }), 400
 
-    cache_key = f"leaderboard:{period}:{limit}"
+    department = request.args.get("department", "").strip() or None
+
+    cache_key = f"leaderboard:{period}:{limit}:{department or ''}"
     cached = default_cache.get(cache_key)
     if cached:
         return jsonify(cached), 200
 
-    board = db.get_leaderboard(period=period, limit=limit)
+    board = db.get_leaderboard(period=period, limit=limit, department=department)
     ranked = []
     for i, entry in enumerate(board, start=1):
         ranked.append({
@@ -195,7 +213,7 @@ def get_leaderboard():
             "issues_closed": entry["issue_count"],
         })
 
-    response = {"period": period, "leaderboard": ranked}
+    response = {"period": period, "department": department, "leaderboard": ranked}
     default_cache.set(cache_key, response)
     return jsonify(response), 200
 
@@ -447,7 +465,8 @@ def export_leaderboard():
             "message": "format must be 'csv' or 'json'",
         }), 400
 
-    board = db.get_leaderboard(period=period, limit=limit)
+    department = request.args.get("department", "").strip() or None
+    board = db.get_leaderboard(period=period, limit=limit, department=department)
     ranked = []
     for i, entry in enumerate(board, start=1):
         ranked.append({

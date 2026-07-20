@@ -181,6 +181,39 @@ class TestLeaderboardEndpoint:
         res = client.get("/api/leaderboard?limit=5")
         assert res.status_code == 200
 
+    @patch("src.api.routes.db")
+    def test_department_filter_passed_to_db(self, mock_db, client):
+        """department query param should be forwarded to get_leaderboard."""
+        mock_db.get_leaderboard.return_value = []
+        client.get("/api/leaderboard?department=CS")
+        mock_db.get_leaderboard.assert_called_once()
+        _, kwargs = mock_db.get_leaderboard.call_args
+        assert kwargs.get("department") == "CS"
+
+    @patch("src.api.routes.db")
+    def test_department_filter_in_response(self, mock_db, client):
+        """Response body should echo back the department filter that was applied."""
+        mock_db.get_leaderboard.return_value = []
+        data = client.get("/api/leaderboard?department=EE").get_json()
+        assert data.get("department") == "EE"
+
+    @patch("src.api.routes.db")
+    def test_no_department_filter_echoes_none(self, mock_db, client):
+        """When no department is given, response department field should be null."""
+        mock_db.get_leaderboard.return_value = []
+        data = client.get("/api/leaderboard").get_json()
+        assert data.get("department") is None
+
+    def test_invalid_period_returns_400(self, client):
+        res = client.get("/api/leaderboard?period=last_year")
+        assert res.status_code == 400
+        assert res.get_json()["error"] == "invalid_param"
+
+    def test_invalid_limit_returns_400(self, client):
+        res = client.get("/api/leaderboard?limit=abc")
+        assert res.status_code == 400
+        assert res.get_json()["error"] == "invalid_param"
+
 
 # ---------------------------------------------------------------------------
 # Contributions
@@ -370,6 +403,40 @@ class TestMentorAnnotationsEndpoint:
         res = client.post("/api/contributions/100/annotations", json=payload)
         assert res.status_code == 400
         assert res.get_json()["error"] == "invalid_payload"
+
+
+class TestDepartmentsEndpoint:
+    """Tests for GET /api/departments."""
+
+    @patch("src.api.routes.db")
+    def test_returns_200(self, mock_db, client):
+        """Endpoint should respond with HTTP 200."""
+        mock_db.get_departments.return_value = ["CS", "EE"]
+        res = client.get("/api/departments")
+        assert res.status_code == 200
+
+    @patch("src.api.routes.db")
+    def test_response_has_departments_key(self, mock_db, client):
+        """Response body must contain a 'departments' list."""
+        mock_db.get_departments.return_value = ["CS", "EE"]
+        data = client.get("/api/departments").get_json()
+        assert "departments" in data
+        assert isinstance(data["departments"], list)
+
+    @patch("src.api.routes.db")
+    def test_returns_known_departments(self, mock_db, client):
+        """Department values from the DB should appear in the response."""
+        mock_db.get_departments.return_value = ["Math", "Physics"]
+        data = client.get("/api/departments").get_json()
+        assert "Math" in data["departments"]
+        assert "Physics" in data["departments"]
+
+    @patch("src.api.routes.db")
+    def test_empty_departments_returns_empty_list(self, mock_db, client):
+        """When no departments exist, response should be an empty list."""
+        mock_db.get_departments.return_value = []
+        data = client.get("/api/departments").get_json()
+        assert data["departments"] == []
 
 
 class TestExportEndpoint:
