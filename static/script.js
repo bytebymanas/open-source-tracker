@@ -82,6 +82,7 @@ async function checkHealth() {
 async function loadLeaderboard(period = "all_time", department = "") {
   renderSkeletons();
   leaderboardSearch.value = "";
+  updateFilterChip(department);
   let url = `/api/leaderboard?period=${period}`;
   if (department) url += `&department=${encodeURIComponent(department)}`;
   try {
@@ -91,7 +92,7 @@ async function loadLeaderboard(period = "all_time", department = "") {
     updateStats(allRows);
   } catch (err) {
     leaderboardBody.innerHTML = `
-      <tr><td colspan="7" style="text-align:center;padding:32px;color:var(--color-error)">
+      <tr><td colspan="8" style="text-align:center;padding:32px;color:var(--color-error)">
         Failed to load leaderboard: ${err.message}
       </td></tr>`;
   }
@@ -117,7 +118,7 @@ async function loadDepartments() {
 
 function renderSkeletons() {
   leaderboardBody.innerHTML = Array(5).fill(`
-    <tr class="skeleton-row"><td colspan="7"><div class="skeleton"></div></td></tr>`).join("");
+    <tr class="skeleton-row"><td colspan="8"><div class="skeleton"></div></td></tr>`).join("");
   leaderboardEmpty.classList.add("hidden");
   tableCount.textContent = "Loading...";
 }
@@ -137,10 +138,14 @@ function renderTable(rows) {
     const avatar    = entry.avatar_url || `https://github.com/${entry.username}.png?size=60`;
     const name      = entry.name || "";
     const username  = entry.username || "";
+    const dept      = entry.department || "";
     const score     = entry.total_score ?? 0;
     const prs       = entry.merged_prs ?? 0;
     const issues    = entry.issues_closed ?? 0;
     const reviews   = entry.reviews ?? 0;
+    const deptCell  = dept
+      ? `<span class="dept-badge">${escapeHtml(dept)}</span>`
+      : `<span class="dept-badge dept-badge-empty">—</span>`;
     return `<tr>
       <td><span class="rank-cell ${rankClass}">#${rank}</span></td>
       <td>
@@ -153,6 +158,7 @@ function renderTable(rows) {
           </div>
         </div>
       </td>
+      <td>${deptCell}</td>
       <td><span class="score-cell">${score}</span></td>
       <td><span class="num-cell">${prs}</span></td>
       <td><span class="num-cell">${issues}</span></td>
@@ -162,6 +168,17 @@ function renderTable(rows) {
       </td>
     </tr>`;
   }).join("");
+}
+
+function updateFilterChip(department) {
+  const bar      = document.getElementById("active-filters");
+  const chipText = document.getElementById("dept-chip-text");
+  if (department) {
+    chipText.textContent = department;
+    bar.style.display = "flex";
+  } else {
+    bar.style.display = "none";
+  }
 }
 
 function updateStats(rows) {
@@ -192,6 +209,13 @@ periodBtns.forEach(btn => {
 // Department filter
 deptSelect.addEventListener("change", () => {
   currentDept = deptSelect.value;
+  loadLeaderboard(currentPeriod, currentDept);
+});
+
+// Clear filter chip
+document.getElementById("dept-chip-clear").addEventListener("click", () => {
+  currentDept = "";
+  deptSelect.value = "";
   loadLeaderboard(currentPeriod, currentDept);
 });
 

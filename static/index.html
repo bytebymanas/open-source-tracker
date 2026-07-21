@@ -98,11 +98,21 @@
           </div>
         </div>
 
+        <!-- Active filter chips -->
+        <div class="active-filters" id="active-filters" style="display:none">
+          <span class="active-filters-label">Filtered by:</span>
+          <span class="filter-chip" id="dept-chip">
+            <span class="filter-chip-text" id="dept-chip-text"></span>
+            <button class="filter-chip-clear" id="dept-chip-clear" aria-label="Clear department filter">&times;</button>
+          </span>
+        </div>
+
         <table class="data-table" id="leaderboard-table">
           <thead>
             <tr>
               <th class="col-rank">Rank</th>
               <th class="col-user">Contributor</th>
+              <th class="col-dept">Department</th>
               <th class="col-score sortable active" data-sort="score">Score</th>
               <th class="col-prs sortable" data-sort="prs">Merged PRs</th>
               <th class="col-issues sortable" data-sort="issues">Issues</th>
@@ -112,10 +122,10 @@
           </thead>
           <tbody id="leaderboard-body">
             <!-- Populated by script.js -->
-            <tr class="skeleton-row"><td colspan="7"><div class="skeleton"></div></td></tr>
-            <tr class="skeleton-row"><td colspan="7"><div class="skeleton"></div></td></tr>
-            <tr class="skeleton-row"><td colspan="7"><div class="skeleton"></div></td></tr>
-            <tr class="skeleton-row"><td colspan="7"><div class="skeleton"></div></td></tr>
+            <tr class="skeleton-row"><td colspan="8"><div class="skeleton"></div></td></tr>
+            <tr class="skeleton-row"><td colspan="8"><div class="skeleton"></div></td></tr>
+            <tr class="skeleton-row"><td colspan="8"><div class="skeleton"></div></td></tr>
+            <tr class="skeleton-row"><td colspan="8"><div class="skeleton"></div></td></tr>
           </tbody>
         </table>
 
