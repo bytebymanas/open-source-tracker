@@ -20,6 +20,7 @@ const leaderboardBody   = document.getElementById("leaderboard-body");
 const leaderboardEmpty  = document.getElementById("leaderboard-empty");
 const tableCount        = document.getElementById("table-count");
 const leaderboardSearch = document.getElementById("leaderboard-search");
+const deptSelect        = document.getElementById("dept-filter");
 const periodBtns        = document.querySelectorAll(".filter-btn[data-period]");
 const statTotalUsers    = document.getElementById("stat-total-users");
 const statTotalPRs      = document.getElementById("stat-total-prs");
@@ -35,8 +36,9 @@ const profileError      = document.getElementById("profile-error");
 const profileErrorMsg   = document.getElementById("profile-error-msg");
 
 // State
-let allRows       = [];
-let currentPeriod = "all_time";
+let allRows          = [];
+let currentPeriod    = "all_time";
+let currentDept      = "";
 
 
 // Navigation
@@ -77,10 +79,13 @@ async function checkHealth() {
 
 
 // Leaderboard
-async function loadLeaderboard(period = "all_time") {
+async function loadLeaderboard(period = "all_time", department = "") {
   renderSkeletons();
+  leaderboardSearch.value = "";
+  let url = `/api/leaderboard?period=${period}`;
+  if (department) url += `&department=${encodeURIComponent(department)}`;
   try {
-    const data = await apiFetch(`/api/leaderboard?period=${period}`);
+    const data = await apiFetch(url);
     allRows = data.leaderboard || [];
     renderTable(allRows);
     updateStats(allRows);
@@ -89,6 +94,24 @@ async function loadLeaderboard(period = "all_time") {
       <tr><td colspan="7" style="text-align:center;padding:32px;color:var(--color-error)">
         Failed to load leaderboard: ${err.message}
       </td></tr>`;
+  }
+}
+
+// Departments
+async function loadDepartments() {
+  try {
+    const data = await apiFetch("/api/departments");
+    const depts = data.departments || [];
+    // Rebuild options — keep the "All Departments" default at top
+    deptSelect.innerHTML = '<option value="">All Departments</option>';
+    depts.forEach(d => {
+      const opt = document.createElement("option");
+      opt.value = d;
+      opt.textContent = d;
+      deptSelect.appendChild(opt);
+    });
+  } catch {
+    // Non-fatal: dropdown stays with the default option
   }
 }
 
@@ -149,7 +172,7 @@ function updateStats(rows) {
 }
 
 
-// Filtering
+// Filtering — username search (client-side over already-loaded rows)
 leaderboardSearch.addEventListener("input", () => {
   const q = leaderboardSearch.value.trim().toLowerCase();
   const filtered = q ? allRows.filter(r => (r.username || "").toLowerCase().includes(q)) : allRows;
@@ -162,8 +185,14 @@ periodBtns.forEach(btn => {
     periodBtns.forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
     currentPeriod = btn.dataset.period;
-    loadLeaderboard(currentPeriod);
+    loadLeaderboard(currentPeriod, currentDept);
   });
+});
+
+// Department filter
+deptSelect.addEventListener("change", () => {
+  currentDept = deptSelect.value;
+  loadLeaderboard(currentPeriod, currentDept);
 });
 
 
@@ -361,5 +390,6 @@ profileInput.addEventListener("keydown", (e) => {
 // Init
 (async function init() {
   await checkHealth();
-  await loadLeaderboard(currentPeriod);
+  await loadDepartments();
+  await loadLeaderboard(currentPeriod, currentDept);
 })();
