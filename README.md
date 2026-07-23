@@ -43,12 +43,6 @@ Universities and student communities often lack a structured way to track open-s
 
 ---
 
-## Screenshots
-
-> Add screenshots or GIFs demonstrating the leaderboard, profile view, and annotation workflow.
-
----
-
 ## Tech Stack
 
 | Layer | Technology |
