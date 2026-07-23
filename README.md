@@ -2,9 +2,8 @@
 
 # Open Source Contribution Tracker
 
-**CUSoC 2026 — Project T-05**
+A full-stack web application that aggregates, scores, and visualizes open-source contributions from GitHub for university students and communities.
 
-A full-stack web application that aggregates, scores, and visualizes open-source contributions from GitHub for university students.  
 Built with Python · Flask · SQLite · GitHub REST API · Vanilla JS
 
 ---
@@ -12,7 +11,7 @@ Built with Python · Flask · SQLite · GitHub REST API · Vanilla JS
 ![Python](https://img.shields.io/badge/Python-3.9%2B-3572A5?style=flat-square&logo=python&logoColor=white)
 ![Flask](https://img.shields.io/badge/Flask-3.0-000000?style=flat-square&logo=flask&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-Database-003B57?style=flat-square&logo=sqlite&logoColor=white)
-![Tests](https://img.shields.io/badge/Tests-131%20passing-34d399?style=flat-square)
+![Tests](https://img.shields.io/badge/Tests-passing-34d399?style=flat-square)
 ![License](https://img.shields.io/badge/License-MIT-f0b429?style=flat-square)
 ![CI](https://img.shields.io/badge/CI-GitHub%20Actions-2088FF?style=flat-square&logo=githubactions&logoColor=white)
 
@@ -22,13 +21,7 @@ Built with Python · Flask · SQLite · GitHub REST API · Vanilla JS
 
 ## Overview
 
-Universities and student communities lack a structured way to track open-source contributions, recognize high-impact contributors, and verify contribution quality at scale. This project solves that by building a centralized platform that:
-
-- Pulls live contribution data from the GitHub REST API
-- Applies a weighted scoring algorithm based on contribution type and impact
-- Displays ranked leaderboards filterable by period and department
-- Lets mentors annotate and verify individual contributions with a built-in UI
-- Exports leaderboard data as CSV or JSON for offline reporting
+Universities and student communities often lack a structured way to track open-source contributions, recognize high-impact contributors, and verify contribution quality at scale. This project provides a centralized platform that pulls live data from GitHub, applies a scoring algorithm, and surfaces ranked leaderboards for individuals and departments — with a built-in mentor review workflow.
 
 **Maintainer:** Manas Chhabra  
 **Repository:** [github.com/bytebymanas/open-source-tracker](https://github.com/bytebymanas/open-source-tracker)  
@@ -36,18 +29,54 @@ Universities and student communities lack a structured way to track open-source 
 
 ---
 
+## Features
+
+- **GitHub Integration** — Live data fetching for pull requests, issues, and repositories via the GitHub REST API
+- **Contribution Scoring** — Weighted scoring engine that evaluates contributions by type and impact
+- **Ranked Leaderboards** — Filterable by time period (all time, this month, this week) and department
+- **Department Filtering** — Dropdown filter with an active chip indicator and one-click clear
+- **Contributor Profiles** — Per-user score cards with a full contribution breakdown
+- **Mentor Annotations** — Inline annotation form per contribution: notes, verification status, and score override
+- **Leaderboard Export** — Download leaderboard data as CSV or JSON
+- **Caching** — In-memory response caching for fast, repeated lookups
+- **CI Pipeline** — Automated test suite on every push via GitHub Actions
+
+---
+
+## Screenshots
+
+> Add screenshots or GIFs demonstrating the leaderboard, profile view, and annotation workflow.
+
+---
 
 ## Tech Stack
 
 | Layer | Technology |
 | :--- | :--- |
 | Backend | Python 3.9+, Flask 3.0 |
-| Database | SQLite (dev) · PostgreSQL-ready (prod) |
+| Database | SQLite (development) · PostgreSQL-ready (production) |
 | Frontend | HTML5, Vanilla CSS, Vanilla JavaScript |
 | API | GitHub REST API v3 |
-| Testing | pytest, unittest.mock |
+| Testing | pytest |
 | CI | GitHub Actions |
-| Auth | GitHub Personal Access Token (env var) |
+
+---
+
+## Architecture
+
+```
+GitHub REST API
+       ↓
+ Flask Backend
+       ↓
+ Scoring Engine
+       ↓
+ SQLite Database
+       ↓
+   REST API
+       ↓
+  Frontend (SPA)
+```
 
 ---
 
@@ -55,35 +84,35 @@ Universities and student communities lack a structured way to track open-source 
 
 ```
 open-source-contribution-tracker/
-├── .env.example               # Environment variable template
+├── .env.example
 ├── .github/
 │   └── workflows/
-│       └── ci.yml             # GitHub Actions CI pipeline
+│       └── ci.yml
 ├── requirements.txt
 ├── src/
-│   ├── main.py                # Flask app entry point, .env loader
+│   ├── main.py
 │   ├── api/
-│   │   ├── github_api.py      # GitHubAPI class — auth, rate limits, fetchers
-│   │   └── routes.py          # All HTTP endpoints (Blueprint)
+│   │   ├── github_api.py
+│   │   └── routes.py
 │   ├── models/
-│   │   └── database.py        # Database class — schema, CRUD, leaderboard
+│   │   └── database.py
 │   └── utils/
-│       ├── scoring.py         # ScoringEngine — weighted contribution scoring
-│       └── cache.py           # TTLCache — in-memory key/value with expiry
+│       ├── scoring.py
+│       └── cache.py
 ├── static/
-│   ├── index.html             # Single-page frontend
-│   ├── style.css              # Dark-theme design system
-│   └── script.js              # Leaderboard, profiles, annotations logic
+│   ├── index.html
+│   ├── style.css
+│   └── script.js
 ├── tests/
-│   ├── test_routes.py         # 45+ route tests (all endpoints)
-│   ├── test_database.py       # 29+ database layer tests
-│   ├── test_integration.py    # 15 full-pipeline integration tests
-│   ├── test_scoring.py        # 16 scoring engine tests
-│   ├── test_cache.py          # 10 cache utility tests
-│   └── test_github_api.py     # GitHub API wrapper tests
+│   ├── test_routes.py
+│   ├── test_database.py
+│   ├── test_integration.py
+│   ├── test_scoring.py
+│   ├── test_cache.py
+│   └── test_github_api.py
 └── docs/
-    ├── API.md                 # Full REST API reference
-    └── ARCHITECTURE.md        # System design and data model
+    ├── API.md
+    └── ARCHITECTURE.md
 ```
 
 ---
@@ -131,7 +160,7 @@ Open `.env` and set your token:
 GITHUB_TOKEN=ghp_your_personal_access_token_here
 ```
 
-Without a token the app still works, but is limited to 60 GitHub API requests per hour.
+> Without a token the app works but is limited to 60 GitHub API requests per hour.
 
 **5. Start the development server**
 
@@ -141,7 +170,7 @@ PYTHONPATH=. python3 src/main.py
 
 Open **[http://127.0.0.1:5000](http://127.0.0.1:5000)** in your browser.
 
-> **Mac users:** Use `127.0.0.1:5000` not `localhost:5000` — AirPlay reserves the `localhost` alias on port 5000.
+> **macOS users:** Use `127.0.0.1:5000` instead of `localhost:5000` — AirPlay can occupy port 5000 on the `localhost` alias.
 
 ---
 
@@ -150,122 +179,87 @@ Open **[http://127.0.0.1:5000](http://127.0.0.1:5000)** in your browser.
 | Method | Endpoint | Description |
 | :---: | :--- | :--- |
 | `GET` | `/api/health` | Server health check |
-| `GET` | `/api/user/<username>` | Fetch GitHub profile, compute + persist score |
-| `GET` | `/api/user/<username>/contributions` | Scored contribution list with internal DB IDs |
-| `GET` | `/api/user/<username>/repos` | Public repos sorted by stars |
+| `GET` | `/api/user/<username>` | Fetch GitHub profile and computed score |
+| `GET` | `/api/user/<username>/contributions` | Scored list of contributions for a user |
+| `GET` | `/api/user/<username>/repos` | Public repositories sorted by stars |
 | `GET` | `/api/leaderboard` | Ranked leaderboard (`period`, `limit`, `department`) |
-| `GET` | `/api/leaderboard/export` | Download as CSV or JSON (`format`, `period`, `limit`, `department`) |
-| `GET` | `/api/departments` | List of distinct department names from active users |
+| `GET` | `/api/leaderboard/export` | Download leaderboard as CSV or JSON |
+| `GET` | `/api/departments` | List of available department names |
 | `GET` | `/api/ratelimit` | GitHub API rate limit status |
-| `GET` | `/api/contributions/<id>/annotations` | Get all mentor annotations for a contribution |
+| `GET` | `/api/contributions/<id>/annotations` | Retrieve mentor annotations for a contribution |
 | `POST` | `/api/contributions/<id>/annotations` | Add a mentor annotation to a contribution |
 
-Full reference with request/response examples: [docs/API.md](docs/API.md)
+Full reference: [docs/API.md](docs/API.md)
 
 ---
 
-## Scoring Algorithm
+## Scoring
 
-Contributions are scored using a fixed weighted table applied by `ScoringEngine`:
+Contributions are evaluated using a weighted scoring algorithm based on contribution type and overall impact. Mentors can review and override scores for individual contributions through the annotation system.
 
-| Contribution Type | Base Points |
-| :--- | :---: |
-| Merged Pull Request | 10 |
-| Code Review | 5 |
-| Issue Closed | 3 |
-| First-time Contributor Bonus | +5 |
-
-Scores are stored per-user per-period (`all_time`, `this_month`, `this_week`) and re-computed on each profile fetch. Mentors can override the score for any specific contribution via the annotation system.
-
-Full scoring documentation: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full scoring model.
 
 ---
 
-## Running Tests
+## Database
 
-```bash
-python3 -m pytest tests/ -v
-```
+The application persists data across five tables: users, repositories, contributions, scores, and mentor annotations. The schema is created automatically on first run.
 
-Or for a compact summary:
+---
+
+## Testing
 
 ```bash
 python3 -m pytest tests/ -q
 ```
 
-**Expected:** 131 tests passing across 6 files in under 10 seconds.
-
-```
-tests/test_routes.py         45 passed
-tests/test_database.py       29 passed
-tests/test_integration.py    15 passed
-tests/test_scoring.py        16 passed
-tests/test_cache.py          10 passed
-tests/test_github_api.py     16 passed
-──────────────────────────────────────
-TOTAL                       131 passed
-```
-
-All GitHub API calls are mocked — tests run offline without consuming rate-limit quota.
+Comprehensive automated tests cover the API, database layer, scoring engine, cache utilities, and integration workflows. All GitHub API calls are mocked — tests run fully offline.
 
 ---
-
-## Database Schema
-
-Five tables in SQLite (auto-migrated on startup via `init_schema()`):
-
-```
-users               — GitHub username, name, avatar, department, university
-repositories        — Tracked repo metadata
-contributions       — Individual PR/issue/review events linked to users
-scores              — Aggregated score per user per period
-mentor_annotations  — Free-text notes, verified flag, score overrides
-```
-
-Foreign keys are enforced. The `department` column on `users` powers the leaderboard filter and the `/api/departments` endpoint.
-
----
-
-## Frontend
-
-The frontend is a single-page dark-theme app (`static/index.html`) with two views:
-
-**Leaderboard view:**
-- Period filter buttons (All Time / This Month / This Week)
-- Department dropdown — dynamically populated from `/api/departments`
-- Active filter chip with one-click clear
-- Department badge per row
-- Username search (client-side)
-- Leaderboard table with rank, contributor, department, score, PRs, issues, reviews
-- Summary stats bar (contributors, merged PRs, issues closed, top score)
-
-**Profile view:**
-- Fetch any GitHub user by username
-- Score card with breakdown (PRs × 10, issues × 3, reviews × 5)
-- Contributions table with type badge, title link, repo, points, and **Annotate** button
-- Annotation form (inline, per row) — mentor username, note, verified toggle, score override
-- Public repository grid (top 12, sorted by stars)
-
 
 ## CI / CD
 
-GitHub Actions workflow at [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every push to `main`:
+GitHub Actions automatically runs the full test suite on every push and pull request. See [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
-1. Sets up Python 3.11
-2. Installs dependencies from `requirements.txt`
-3. Runs the full test suite (`pytest tests/ -q`)
-4. Fails the build if any test fails
+---
+
+## Documentation
+
+- [API Reference](docs/API.md) — All endpoints with request/response examples
+- [Architecture](docs/ARCHITECTURE.md) — System design, data model, and scoring algorithm
+
+---
+
+## Roadmap
+
+- [ ] OAuth Authentication
+- [ ] PostgreSQL Support
+- [ ] Docker Deployment
+- [ ] Admin Dashboard
+- [ ] Contribution Trends & Analytics
+- [ ] Organization-level Leaderboards
+- [ ] PDF Portfolio Export
+- [ ] Dark / Light Theme Toggle
 
 ---
 
 ## Contributing
 
-This is a CUSoC 2026 project under active development. To contribute:
+Contributions are welcome. To get started:
 
-1. Open an issue to discuss the change
-2. Fork the repo and create a branch from `main`
-3. Write tests for new functionality
-4. Ensure all 131+ tests pass before opening a pull request
+1. Open an issue to discuss the proposed change
+2. Fork the repository and create a branch from `main`
+3. Write tests for any new functionality
+4. Ensure all tests pass before opening a pull request
+
+---
+
+## Acknowledgements
+
+- [GitHub REST API](https://docs.github.com/en/rest)
+- [Flask](https://flask.palletsprojects.com)
+- [Python](https://python.org)
+- The open-source community
 
 ---
 
