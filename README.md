@@ -36,26 +36,6 @@ Universities and student communities lack a structured way to track open-source 
 
 ---
 
-## Features
-
-| Feature | Status |
-| :--- | :---: |
-| GitHub API integration (PRs, issues, repos) | ✅ |
-| Weighted contribution scoring engine | ✅ |
-| Ranked leaderboard with period filters | ✅ |
-| Department filter (dropdown + active chip) | ✅ |
-| Department badge on each leaderboard row | ✅ |
-| Individual contributor profile view | ✅ |
-| Contributions breakdown with per-item scores | ✅ |
-| Public repository grid | ✅ |
-| Mentor annotation form per contribution | ✅ |
-| Leaderboard export (CSV + JSON download) | ✅ |
-| In-memory cache (5-min TTL) | ✅ |
-| GitHub webhook receiver | ⏳ Week 4 Day 5 |
-| PDF portfolio export | ⏳ Week 5 |
-| Production Docker deployment | ⏳ Week 5 |
-
----
 
 ## Tech Stack
 
@@ -266,19 +246,6 @@ The frontend is a single-page dark-theme app (`static/index.html`) with two view
 - Annotation form (inline, per row) — mentor username, note, verified toggle, score override
 - Public repository grid (top 12, sorted by stars)
 
----
-
-## Development Progress
-
-| Week | Theme | Status |
-| :---: | :--- | :---: |
-| Week 1 | Planning, setup, skeleton, documentation | ✅ Done |
-| Week 2 | GitHub API, database schema, scoring engine, full frontend | ✅ Done |
-| Week 3 | Export (CSV/JSON), 131 tests, CI pipeline, annotation API | ✅ Done |
-| Week 4 | Department filters, mentor annotation UI, webhook stub | ⏳ In Progress |
-| Week 5 | PDF export, Dockerfile, gunicorn, API.md/ARCHITECTURE.md, demo | ⏳ Next |
-
----
 
 ## CI / CD
 
