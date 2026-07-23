@@ -288,6 +288,33 @@ class TestContributionsEndpoint:
         data = client.get("/api/user/bytebymanas/contributions").get_json()
         assert data["total"] == len(data["contributions"])
 
+    @patch("src.api.routes.db")
+    @patch("src.api.routes.github")
+    def test_each_contribution_has_id(self, mock_gh, mock_db, client):
+        """Each contribution item must include an internal DB id for annotation linking."""
+        mock_gh.get_user.return_value = MOCK_GITHUB_USER
+        mock_gh.get_merged_pull_requests.return_value = MOCK_PRS
+        mock_gh.get_user_issues.return_value = MOCK_ISSUES
+        mock_db.upsert_user.return_value = 1
+        mock_db.upsert_contribution.side_effect = [10, 20]
+        data = client.get("/api/user/bytebymanas/contributions").get_json()
+        for item in data["contributions"]:
+            assert "id" in item
+            assert isinstance(item["id"], int)
+
+    @patch("src.api.routes.db")
+    @patch("src.api.routes.github")
+    def test_contribution_id_is_positive(self, mock_gh, mock_db, client):
+        """Contribution ids returned should be positive integers."""
+        mock_gh.get_user.return_value = MOCK_GITHUB_USER
+        mock_gh.get_merged_pull_requests.return_value = MOCK_PRS
+        mock_gh.get_user_issues.return_value = []
+        mock_db.upsert_user.return_value = 1
+        mock_db.upsert_contribution.return_value = 42
+        data = client.get("/api/user/bytebymanas/contributions").get_json()
+        pr_items = [c for c in data["contributions"] if c["type"] == "pull_request"]
+        assert all(item["id"] > 0 for item in pr_items)
+
 
 # ---------------------------------------------------------------------------
 # Repos

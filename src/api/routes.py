@@ -278,6 +278,14 @@ def get_user_contributions(username):
     except GitHubAPIError as e:
         return jsonify({"error": "github_api_error", "message": str(e)}), 503
 
+    # Ensure user exists in the DB so contributions can be linked
+    user_id = db.upsert_user(
+        github_username=username,
+        github_id=profile.get("id"),
+        name=profile.get("name"),
+        avatar_url=profile.get("avatar_url"),
+    )
+
     contributions = []
 
     for pr in prs:
@@ -292,6 +300,16 @@ def get_user_contributions(username):
             "state":      "merged",
         }
         item["points"] = scorer.score_contribution(item)
+        # Persist contribution and attach internal ID for annotation linking
+        item["id"] = db.upsert_contribution(
+            user_id=user_id,
+            github_id=item["github_id"],
+            contribution_type=item["type"],
+            title=item["title"],
+            url=item["url"],
+            status=item["state"],
+            is_merged=item["is_merged"],
+        )
         contributions.append(item)
 
     for issue in issues:
@@ -306,6 +324,15 @@ def get_user_contributions(username):
             "state":      issue.get("state", "closed"),
         }
         item["points"] = scorer.score_contribution(item)
+        item["id"] = db.upsert_contribution(
+            user_id=user_id,
+            github_id=item["github_id"],
+            contribution_type=item["type"],
+            title=item["title"],
+            url=item["url"],
+            status=item["state"],
+            is_merged=False,
+        )
         contributions.append(item)
 
     # Sort by points descending
