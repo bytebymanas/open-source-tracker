@@ -299,6 +299,7 @@ async function fetchContributions(username) {
     }
 
     bodyEl.innerHTML = items.map(item => {
+      const contribId = item.id;
       const ispr  = item.type === "pull_request";
       const badge = ispr
         ? `<span class="contrib-type-badge badge-pr">PR</span>`
@@ -307,11 +308,56 @@ async function fetchContributions(username) {
         ? `<a href="${item.url}" target="_blank" rel="noopener" class="contrib-title">${escapeHtml(item.title)}</a>`
         : `<span class="contrib-title">—</span>`;
 
-      return `<tr>
+      const rowId  = `annot-row-${contribId}`;
+      const formId = `annot-form-${contribId}`;
+
+      return `<tr data-contrib-id="${contribId}">
         <td>${badge}</td>
         <td>${titleHtml}</td>
         <td><span class="contrib-repo">${escapeHtml(item.repo || "—")}</span></td>
         <td><span class="contrib-pts">+${item.points}</span></td>
+        <td class="action-cell">
+          <button class="btn-annotate" id="btn-annot-${contribId}"
+            onclick="toggleAnnotationForm(${contribId})">Annotate</button>
+        </td>
+      </tr>
+      <tr class="annot-form-row hidden" id="${rowId}">
+        <td colspan="5">
+          <div class="annot-form" id="${formId}">
+            <div class="annot-form-header">
+              <span class="annot-form-title">Add Mentor Annotation</span>
+              <span class="annot-form-id">Contribution #${contribId}</span>
+            </div>
+            <div class="annot-fields">
+              <div class="annot-field">
+                <label class="annot-label" for="annot-mentor-${contribId}">Mentor Username <span class="annot-required">*</span></label>
+                <input type="text" id="annot-mentor-${contribId}" class="annot-input"
+                  placeholder="github_username" autocomplete="off" spellcheck="false" />
+              </div>
+              <div class="annot-field annot-field-grow">
+                <label class="annot-label" for="annot-note-${contribId}">Note</label>
+                <textarea id="annot-note-${contribId}" class="annot-textarea"
+                  placeholder="Quality feedback, concerns, or observations..." rows="2"></textarea>
+              </div>
+              <div class="annot-field annot-field-narrow">
+                <label class="annot-label" for="annot-override-${contribId}">Score Override</label>
+                <input type="number" id="annot-override-${contribId}" class="annot-input"
+                  placeholder="—" min="0" max="100" />
+              </div>
+            </div>
+            <div class="annot-footer">
+              <label class="annot-checkbox-label">
+                <input type="checkbox" id="annot-verified-${contribId}" class="annot-checkbox" />
+                <span>Mark as verified</span>
+              </label>
+              <div class="annot-actions">
+                <span class="annot-feedback hidden" id="annot-feedback-${contribId}"></span>
+                <button class="btn-secondary" onclick="toggleAnnotationForm(${contribId})">Cancel</button>
+                <button class="btn-primary btn-sm" onclick="submitAnnotation(${contribId})">Submit</button>
+              </div>
+            </div>
+          </div>
+        </td>
       </tr>`;
     }).join("");
 
@@ -323,6 +369,65 @@ async function fetchContributions(username) {
   } finally {
     loadingEl.classList.add("hidden");
   }
+}
+
+function toggleAnnotationForm(contribId) {
+  const row = document.getElementById(`annot-row-${contribId}`);
+  if (!row) return;
+  const isHidden = row.classList.toggle("hidden");
+  const btn = document.getElementById(`btn-annot-${contribId}`);
+  if (btn) btn.textContent = isHidden ? "Annotate" : "Cancel";
+}
+
+async function submitAnnotation(contribId) {
+  const mentorInput    = document.getElementById(`annot-mentor-${contribId}`);
+  const noteInput      = document.getElementById(`annot-note-${contribId}`);
+  const verifiedInput  = document.getElementById(`annot-verified-${contribId}`);
+  const overrideInput  = document.getElementById(`annot-override-${contribId}`);
+  const feedbackEl     = document.getElementById(`annot-feedback-${contribId}`);
+
+  const mentor = mentorInput.value.trim();
+  if (!mentor) {
+    showAnnotFeedback(feedbackEl, "Mentor username is required.", false);
+    mentorInput.focus();
+    return;
+  }
+
+  const payload = {
+    mentor_username: mentor,
+    note:            noteInput.value.trim() || null,
+    verified:        verifiedInput.checked ? 1 : 0,
+    score_override:  overrideInput.value !== "" ? parseInt(overrideInput.value, 10) : null,
+  };
+
+  const submitBtn = document.querySelector(`#annot-form-${contribId} .btn-primary`);
+  if (submitBtn) submitBtn.disabled = true;
+
+  try {
+    const res = await fetch(`/api/contributions/${contribId}/annotations`, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify(payload),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      showAnnotFeedback(feedbackEl, body.message || `Error ${res.status}`, false);
+    } else {
+      showAnnotFeedback(feedbackEl, "Annotation saved.", true);
+      noteInput.value      = "";
+      verifiedInput.checked = false;
+      overrideInput.value  = "";
+    }
+  } catch {
+    showAnnotFeedback(feedbackEl, "Network error. Try again.", false);
+  } finally {
+    if (submitBtn) submitBtn.disabled = false;
+  }
+}
+
+function showAnnotFeedback(el, msg, success) {
+  el.textContent = msg;
+  el.className = `annot-feedback ${success ? "annot-feedback-ok" : "annot-feedback-err"}`;
 }
 
 

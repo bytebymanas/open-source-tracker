@@ -985,6 +985,159 @@ input { font-family: inherit; }
   color: var(--color-accent);
 }
 
+/* Annotate button */
+.btn-annotate {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border-light);
+  background: transparent;
+  color: var(--color-text-muted);
+  transition: color var(--transition), border-color var(--transition), background var(--transition);
+}
+
+.btn-annotate:hover {
+  color: var(--color-accent-hover);
+  border-color: var(--color-accent);
+  background: var(--color-accent-dim);
+}
+
+/* Annotation form row */
+.annot-form-row td {
+  padding: 0 !important;
+  border-top: none !important;
+}
+
+.annot-form {
+  background: var(--color-surface-2);
+  border-top: 1px solid var(--color-accent-dim);
+  border-bottom: 1px solid var(--color-border);
+  padding: var(--space-4) var(--space-5);
+}
+
+.annot-form-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.annot-form-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-accent-hover);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.annot-form-id {
+  font-size: 11px;
+  color: var(--color-text-faint);
+  font-family: var(--font-mono);
+}
+
+.annot-fields {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  flex-wrap: wrap;
+  margin-bottom: var(--space-3);
+}
+
+.annot-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 160px;
+}
+
+.annot-field-grow { flex: 1; min-width: 200px; }
+.annot-field-narrow { max-width: 110px; }
+
+.annot-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.annot-required { color: var(--color-error); }
+
+.annot-input,
+.annot-textarea {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  padding: 5px 8px;
+  transition: border-color var(--transition), box-shadow var(--transition);
+  width: 100%;
+}
+
+.annot-input:focus,
+.annot-textarea:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px var(--color-accent-dim);
+}
+
+.annot-textarea { resize: vertical; min-height: 52px; }
+
+.annot-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.annot-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 12px;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.annot-checkbox { accent-color: var(--color-accent); }
+
+.annot-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.annot-feedback {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.annot-feedback-ok  { color: var(--color-success); }
+.annot-feedback-err { color: var(--color-error); }
+
+.btn-sm { padding: 4px 12px; font-size: 12px; }
+
+.btn-secondary {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border-light);
+  background: transparent;
+  color: var(--color-text-muted);
+  transition: color var(--transition), border-color var(--transition);
+}
+
+.btn-secondary:hover {
+  color: var(--color-text);
+  border-color: var(--color-text-muted);
+}
+
+
 /* Repos grid */
 .repos-grid {
   display: grid;
