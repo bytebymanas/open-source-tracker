@@ -23,6 +23,8 @@ import os
 from typing import Optional
 
 from flask import Blueprint, jsonify, request
+from src.models.database import Database
+from src.utils.scoring import ScoringEngine
 
 logger = logging.getLogger(__name__)
 
@@ -109,20 +111,134 @@ def github_webhook():
 
 
 # ---------------------------------------------------------------------------
-# Event handlers (stub — event parsing in next commit)
+# Event handlers
 # ---------------------------------------------------------------------------
 
 def _handle_pull_request(payload: dict):
-    """Acknowledge a pull_request event."""
+    """
+    Handle a pull_request webhook event.
+
+    Only persists the contribution when:
+        - action == "closed"
+        - pull_request.merged == True
+
+    All other actions (opened, synchronize, reopened, etc.) are acknowledged
+    but produce no database writes.
+    """
     action = payload.get("action", "")
     pr     = payload.get("pull_request", {})
-    logger.info("pull_request event: action=%s pr=%s", action, pr.get("html_url", ""))
-    return jsonify({"status": "ok", "event": "pull_request", "action": action}), 200
+
+    if action != "closed" or not pr.get("merged"):
+        logger.info("pull_request ignored: action=%s merged=%s", action, pr.get("merged"))
+        return jsonify({"status": "ok", "event": "pull_request", "action": action, "persisted": False}), 200
+
+    sender   = payload.get("sender", {})
+    username = sender.get("login", "")
+    if not username:
+        return jsonify({"error": "invalid_payload", "message": "sender.login missing"}), 400
+
+    db     = Database()
+    scorer = ScoringEngine()
+
+    user_id = db.upsert_user(
+        github_username=username,
+        github_id=sender.get("id"),
+        name=sender.get("login"),
+        avatar_url=sender.get("avatar_url"),
+    )
+
+    item = {
+        "type":      "pull_request",
+        "is_merged": True,
+        "is_first_contribution": False,
+    }
+    points    = scorer.score_contribution(item)
+    repo_name = pr.get("base", {}).get("repo", {}).get("full_name", "")
+    github_id = str(pr.get("id", ""))
+
+    contrib_id = db.upsert_contribution(
+        user_id=user_id,
+        github_id=github_id,
+        contribution_type="pull_request",
+        title=pr.get("title", ""),
+        url=pr.get("html_url", ""),
+        status="merged",
+        is_merged=True,
+    )
+
+    logger.info(
+        "pull_request persisted: user=%s repo=%s contrib_id=%s points=%s",
+        username, repo_name, contrib_id, points,
+    )
+    return jsonify({
+        "status":      "ok",
+        "event":       "pull_request",
+        "action":      action,
+        "persisted":   True,
+        "contrib_id":  contrib_id,
+        "username":    username,
+    }), 200
 
 
 def _handle_issue(payload: dict):
-    """Acknowledge an issues event."""
+    """
+    Handle an issues webhook event.
+
+    Only persists the contribution when:
+        - action == "closed"
+
+    All other actions are acknowledged but produce no database writes.
+    """
     action = payload.get("action", "")
     issue  = payload.get("issue", {})
-    logger.info("issues event: action=%s issue=%s", action, issue.get("html_url", ""))
-    return jsonify({"status": "ok", "event": "issues", "action": action}), 200
+
+    if action != "closed":
+        logger.info("issues event ignored: action=%s", action)
+        return jsonify({"status": "ok", "event": "issues", "action": action, "persisted": False}), 200
+
+    sender   = payload.get("sender", {})
+    username = sender.get("login", "")
+    if not username:
+        return jsonify({"error": "invalid_payload", "message": "sender.login missing"}), 400
+
+    db     = Database()
+    scorer = ScoringEngine()
+
+    user_id = db.upsert_user(
+        github_username=username,
+        github_id=sender.get("id"),
+        name=sender.get("login"),
+        avatar_url=sender.get("avatar_url"),
+    )
+
+    item = {
+        "type":      "issue",
+        "is_merged": False,
+        "is_first_contribution": False,
+    }
+    points    = scorer.score_contribution(item)
+    github_id = str(issue.get("id", ""))
+
+    contrib_id = db.upsert_contribution(
+        user_id=user_id,
+        github_id=github_id,
+        contribution_type="issue",
+        title=issue.get("title", ""),
+        url=issue.get("html_url", ""),
+        status="closed",
+        is_merged=False,
+    )
+
+    logger.info(
+        "issue persisted: user=%s issue_id=%s contrib_id=%s points=%s",
+        username, github_id, contrib_id, points,
+    )
+    return jsonify({
+        "status":      "ok",
+        "event":       "issues",
+        "action":      action,
+        "persisted":   True,
+        "contrib_id":  contrib_id,
+        "username":    username,
+    }), 200
+
