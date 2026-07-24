@@ -9,6 +9,7 @@ import os
 from dotenv import load_dotenv
 from flask import Flask, send_from_directory
 from src.api.routes import api
+from src.api.webhook import webhook
 
 # Load environment variables from .env if present
 load_dotenv()
@@ -21,6 +22,7 @@ app = Flask(__name__, static_folder=STATIC_DIR, static_url_path="/static")
 
 # Register blueprints
 app.register_blueprint(api)
+app.register_blueprint(webhook)
 
 
 @app.route("/")
