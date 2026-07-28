@@ -389,3 +389,141 @@ class Database:
         with self._connect() as conn:
             rows = conn.execute(sql, (contribution_id,)).fetchall()
             return [dict(r) for r in rows]
+
+    # ------------------------------------------------------------------
+    # Student roster
+    # ------------------------------------------------------------------
+
+    def get_all_students(self):
+        """Return all tracked students joined with their all_time score."""
+        sql = """
+        SELECT
+            u.id,
+            u.github_username,
+            u.name,
+            u.avatar_url,
+            u.department,
+            u.university,
+            u.created_at,
+            u.last_synced_at,
+            COALESCE(s.total_score,  0) AS total_score,
+            COALESCE(s.pr_count,     0) AS pr_count,
+            COALESCE(s.issue_count,  0) AS issue_count,
+            COALESCE(s.review_count, 0) AS review_count
+        FROM users u
+        LEFT JOIN scores s ON s.user_id = u.id AND s.period = 'all_time'
+        WHERE u.is_active = 1
+        ORDER BY total_score DESC, u.github_username
+        """
+        with self._connect() as conn:
+            rows = conn.execute(sql).fetchall()
+            return [dict(r) for r in rows]
+
+    def update_student_meta(self, github_username, department=None, university=None):
+        """Update department and/or university for a tracked student. Returns bool."""
+        sets, params = [], []
+        if department is not None:
+            sets.append("department = ?")
+            params.append(department)
+        if university is not None:
+            sets.append("university = ?")
+            params.append(university)
+        if not sets:
+            return False
+        params.append(github_username)
+        sql = f"UPDATE users SET {', '.join(sets)} WHERE github_username = ? AND is_active = 1"
+        with self._connect() as conn:
+            cursor = conn.execute(sql, params)
+            conn.commit()
+            return cursor.rowcount > 0
+
+    def delete_student(self, github_username):
+        """Remove a tracked student and all associated data. Returns bool."""
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT id FROM users WHERE github_username = ?", (github_username,)
+            ).fetchone()
+            if not row:
+                return False
+            uid = row["id"]
+            conn.execute("""
+                DELETE FROM mentor_annotations
+                WHERE contribution_id IN (SELECT id FROM contributions WHERE user_id = ?)
+            """, (uid,))
+            conn.execute("DELETE FROM contributions WHERE user_id = ?", (uid,))
+            conn.execute("DELETE FROM scores WHERE user_id = ?", (uid,))
+            conn.execute("DELETE FROM users WHERE id = ?", (uid,))
+            conn.commit()
+            return True
+
+    # ------------------------------------------------------------------
+    # Mentor annotations (extended)
+    # ------------------------------------------------------------------
+
+    def get_all_annotations(self, mentor_username=None, verified=None, student_username=None):
+        """Return all annotations across all contributions with join data."""
+        filters, params = [], []
+        if mentor_username:
+            filters.append("ma.mentor_username = ?")
+            params.append(mentor_username)
+        if verified is not None:
+            filters.append("ma.verified = ?")
+            params.append(int(verified))
+        if student_username:
+            filters.append("u.github_username = ?")
+            params.append(student_username)
+        where = ("WHERE " + " AND ".join(filters)) if filters else ""
+        sql = f"""
+        SELECT
+            ma.id,
+            ma.mentor_username,
+            ma.note,
+            ma.verified,
+            ma.score_override,
+            ma.annotated_at,
+            c.id              AS contribution_id,
+            c.type            AS contribution_type,
+            c.title           AS contribution_title,
+            c.url             AS contribution_url,
+            u.github_username AS student_username,
+            u.name            AS student_name,
+            u.avatar_url      AS student_avatar
+        FROM mentor_annotations ma
+        JOIN contributions c ON c.id = ma.contribution_id
+        JOIN users u ON u.id = c.user_id
+        {where}
+        ORDER BY ma.annotated_at DESC
+        """
+        with self._connect() as conn:
+            rows = conn.execute(sql, params).fetchall()
+            return [dict(r) for r in rows]
+
+    def update_annotation(self, annotation_id, note=None, verified=None, score_override=None):
+        """Partially update a mentor annotation. Returns bool."""
+        sets, params = [], []
+        if note is not None:
+            sets.append("note = ?")
+            params.append(note)
+        if verified is not None:
+            sets.append("verified = ?")
+            params.append(int(verified))
+        if score_override is not None:
+            sets.append("score_override = ?")
+            params.append(score_override)
+        if not sets:
+            return False
+        params.append(annotation_id)
+        sql = f"UPDATE mentor_annotations SET {', '.join(sets)} WHERE id = ?"
+        with self._connect() as conn:
+            cursor = conn.execute(sql, params)
+            conn.commit()
+            return cursor.rowcount > 0
+
+    def delete_annotation(self, annotation_id):
+        """Delete a mentor annotation by ID. Returns bool."""
+        with self._connect() as conn:
+            cursor = conn.execute(
+                "DELETE FROM mentor_annotations WHERE id = ?", (annotation_id,)
+            )
+            conn.commit()
+            return cursor.rowcount > 0

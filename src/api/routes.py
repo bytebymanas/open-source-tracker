@@ -539,3 +539,183 @@ def export_leaderboard():
         },
     )
 
+
+
+# =============================================================================
+# Student Roster Routes
+# =============================================================================
+
+@api.route("/students", methods=["GET"])
+def list_students():
+    """
+    GET /api/students
+    Return all tracked students with their scores and metadata.
+    """
+    try:
+        students = db.get_all_students()
+        return jsonify({"total": len(students), "students": students})
+    except Exception as exc:
+        logger.exception("list_students error")
+        return jsonify({"error": "db_error", "message": str(exc)}), 500
+
+
+@api.route("/students/import", methods=["POST"])
+def import_students():
+    """
+    POST /api/students/import
+    Body: {"usernames": ["user1", "user2", ...]}
+
+    Fetch and persist multiple GitHub users in parallel.
+    Returns a per-username status report.
+    """
+    body = request.get_json(silent=True) or {}
+    usernames = body.get("usernames", [])
+    if not usernames or not isinstance(usernames, list):
+        return jsonify({"error": "invalid_payload",
+                        "message": "usernames must be a non-empty list"}), 400
+
+    usernames = [u.strip() for u in usernames if isinstance(u, str) and u.strip()]
+    if not usernames:
+        return jsonify({"error": "invalid_payload",
+                        "message": "No valid usernames provided"}), 400
+
+    import concurrent.futures
+
+    def fetch_one(username):
+        try:
+            user_data  = github.get_user(username)
+            score_data = github.get_user_contributions(username)
+            scored     = scorer.score_contributions(score_data)
+            user_id    = db.upsert_user(
+                github_username=username,
+                github_id=user_data.get("id"),
+                name=user_data.get("name") or user_data.get("login"),
+                avatar_url=user_data.get("avatar_url"),
+            )
+            db.upsert_score(
+                user_id=user_id,
+                total_score=scored["total_score"],
+                pr_count=scored["merged_prs"],
+                issue_count=scored["issues_closed"],
+                review_count=scored["reviews"],
+                period="all_time",
+            )
+            return {"username": username, "status": "ok",
+                    "score": scored["total_score"]}
+        except GitHubAPIError as exc:
+            return {"username": username, "status": "error", "message": str(exc)}
+        except Exception as exc:
+            logger.exception("import_students: error for %s", username)
+            return {"username": username, "status": "error", "message": str(exc)}
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as pool:
+        results = list(pool.map(fetch_one, usernames))
+
+    ok    = [r for r in results if r["status"] == "ok"]
+    errs  = [r for r in results if r["status"] != "ok"]
+    return jsonify({
+        "imported": len(ok),
+        "failed":   len(errs),
+        "results":  results,
+    })
+
+
+@api.route("/students/<username>", methods=["PATCH"])
+def update_student(username):
+    """
+    PATCH /api/students/<username>
+    Body: {"department": "CSE", "university": "Chandigarh University"}
+    Update department and/or university for a tracked student.
+    """
+    body = request.get_json(silent=True) or {}
+    department = body.get("department")
+    university = body.get("university")
+    if department is None and university is None:
+        return jsonify({"error": "invalid_payload",
+                        "message": "Provide at least one of: department, university"}), 400
+    updated = db.update_student_meta(username, department=department, university=university)
+    if not updated:
+        return jsonify({"error": "not_found",
+                        "message": f"Student '{username}' not found"}), 404
+    return jsonify({"status": "ok", "username": username,
+                    "department": department, "university": university})
+
+
+@api.route("/students/<username>", methods=["DELETE"])
+def delete_student(username):
+    """
+    DELETE /api/students/<username>
+    Remove a student and all their data from the tracker.
+    """
+    deleted = db.delete_student(username)
+    if not deleted:
+        return jsonify({"error": "not_found",
+                        "message": f"Student '{username}' not found"}), 404
+    return jsonify({"status": "ok", "username": username, "deleted": True})
+
+
+# =============================================================================
+# Mentor Dashboard Routes
+# =============================================================================
+
+@api.route("/annotations", methods=["GET"])
+def list_annotations():
+    """
+    GET /api/annotations
+    Query params: mentor, verified (0|1), student
+    Return all mentor annotations with contribution and student context.
+    """
+    mentor  = request.args.get("mentor")
+    student = request.args.get("student")
+    verified_raw = request.args.get("verified")
+    verified = None
+    if verified_raw is not None:
+        if verified_raw not in ("0", "1"):
+            return jsonify({"error": "invalid_param",
+                            "message": "verified must be 0 or 1"}), 400
+        verified = int(verified_raw)
+    try:
+        rows = db.get_all_annotations(
+            mentor_username=mentor,
+            verified=verified,
+            student_username=student,
+        )
+        return jsonify({"total": len(rows), "annotations": rows})
+    except Exception as exc:
+        logger.exception("list_annotations error")
+        return jsonify({"error": "db_error", "message": str(exc)}), 500
+
+
+@api.route("/annotations/<int:annotation_id>", methods=["PATCH"])
+def update_annotation(annotation_id):
+    """
+    PATCH /api/annotations/<id>
+    Body: {"note": "...", "verified": 1, "score_override": 8}
+    Partially update a mentor annotation.
+    """
+    body = request.get_json(silent=True) or {}
+    note           = body.get("note")
+    verified       = body.get("verified")
+    score_override = body.get("score_override")
+    if note is None and verified is None and score_override is None:
+        return jsonify({"error": "invalid_payload",
+                        "message": "Provide at least one field to update"}), 400
+    updated = db.update_annotation(annotation_id, note=note,
+                                   verified=verified, score_override=score_override)
+    if not updated:
+        return jsonify({"error": "not_found",
+                        "message": f"Annotation {annotation_id} not found"}), 404
+    return jsonify({"status": "ok", "annotation_id": annotation_id})
+
+
+@api.route("/annotations/<int:annotation_id>", methods=["DELETE"])
+def delete_annotation(annotation_id):
+    """
+    DELETE /api/annotations/<id>
+    Remove a mentor annotation.
+    """
+    deleted = db.delete_annotation(annotation_id)
+    if not deleted:
+        return jsonify({"error": "not_found",
+                        "message": f"Annotation {annotation_id} not found"}), 404
+    return jsonify({"status": "ok", "annotation_id": annotation_id, "deleted": True})
