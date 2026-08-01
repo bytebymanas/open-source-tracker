@@ -8,8 +8,12 @@ const API_BASE = "";
 // DOM refs - Navigation
 const navLeaderboard    = document.getElementById("nav-leaderboard");
 const navProfile        = document.getElementById("nav-profile");
+const navStudents       = document.getElementById("nav-students");
+const navMentor         = document.getElementById("nav-mentor");
 const viewLeaderboard   = document.getElementById("view-leaderboard");
 const viewProfile       = document.getElementById("view-profile");
+const viewStudents      = document.getElementById("view-students");
+const viewMentor        = document.getElementById("view-mentor");
 
 // DOM refs - Status
 const apiStatusDot      = document.querySelector(".status-dot");
@@ -39,19 +43,31 @@ const profileErrorMsg   = document.getElementById("profile-error-msg");
 let allRows          = [];
 let currentPeriod    = "all_time";
 let currentDept      = "";
+let currentProfileUsername = null;
 
 
 // Navigation
+const VIEWS = {
+  leaderboard: { view: () => viewLeaderboard, nav: () => navLeaderboard },
+  profile:     { view: () => viewProfile,     nav: () => navProfile     },
+  students:    { view: () => viewStudents,    nav: () => navStudents    },
+  mentor:      { view: () => viewMentor,      nav: () => navMentor      },
+};
+
 function showView(name) {
-  const isLeaderboard = name === "leaderboard";
-  viewLeaderboard.classList.toggle("active", isLeaderboard);
-  viewProfile.classList.toggle("active", !isLeaderboard);
-  navLeaderboard.classList.toggle("active", isLeaderboard);
-  navProfile.classList.toggle("active", !isLeaderboard);
+  Object.entries(VIEWS).forEach(([key, refs]) => {
+    const isActive = key === name;
+    refs.view().classList.toggle("active", isActive);
+    refs.nav().classList.toggle("active", isActive);
+  });
+  if (name === "students") loadStudents();
+  if (name === "mentor")   loadAnnotations();
 }
 
 navLeaderboard.addEventListener("click", (e) => { e.preventDefault(); showView("leaderboard"); });
 navProfile.addEventListener("click",     (e) => { e.preventDefault(); showView("profile"); });
+navStudents.addEventListener("click",    (e) => { e.preventDefault(); showView("students"); });
+navMentor.addEventListener("click",      (e) => { e.preventDefault(); showView("mentor"); });
 
 
 // API helpers
@@ -229,6 +245,10 @@ function openProfile(username) {
 
 async function fetchProfile(username) {
   if (!username) return;
+
+  currentProfileUsername = username;
+  const rosterBtn = document.getElementById("btn-add-roster");
+  if (rosterBtn) { rosterBtn.disabled = false; rosterBtn.textContent = "+ Add to Roster"; }
 
   profileCard.classList.add("hidden");
   profileError.classList.add("hidden");
@@ -522,3 +542,330 @@ profileInput.addEventListener("keydown", (e) => {
   await loadDepartments();
   await loadLeaderboard(currentPeriod, currentDept);
 })();
+
+
+// =============================================================================
+// Students Tab
+// =============================================================================
+
+async function loadStudents() {
+  const body   = document.getElementById("students-body");
+  const countEl = document.getElementById("students-count");
+  const emptyEl = document.getElementById("students-empty");
+  if (!body) return;
+  countEl.textContent = "Loading...";
+  emptyEl.classList.add("hidden");
+  body.innerHTML = "";
+
+  try {
+    const data     = await apiFetch("/api/students");
+    const students = data.students || [];
+    countEl.textContent = `${students.length} students`;
+    if (students.length === 0) {
+      emptyEl.classList.remove("hidden");
+      return;
+    }
+    renderStudentRows(students);
+    setupStudentsSearch(students);
+  } catch (err) {
+    countEl.textContent = "error";
+    console.error("loadStudents:", err);
+  }
+}
+
+function renderStudentRows(students) {
+  const body = document.getElementById("students-body");
+  body.innerHTML = students.map(s => {
+    const avatar    = s.avatar_url
+      ? `<img src="${s.avatar_url}" class="row-avatar" alt="${escapeHtml(s.github_username)}" loading="lazy" />`
+      : `<span class="row-avatar-placeholder"></span>`;
+    const synced    = s.last_synced_at ? s.last_synced_at.slice(0, 10) : "—";
+    const dept      = escapeHtml(s.department  || "");
+    const uni       = escapeHtml(s.university  || "");
+    return `<tr data-username="${escapeHtml(s.github_username)}">
+      <td>
+        <div class="user-cell">
+          ${avatar}
+          <div class="user-cell-info">
+            <a href="https://github.com/${escapeHtml(s.github_username)}" target="_blank" rel="noopener" class="user-cell-name">
+              ${escapeHtml(s.name || s.github_username)}
+            </a>
+            <span class="user-cell-handle">@${escapeHtml(s.github_username)}</span>
+          </div>
+        </div>
+      </td>
+      <td>
+        <input type="text" class="inline-edit" value="${dept}"
+          data-field="department" data-username="${escapeHtml(s.github_username)}"
+          placeholder="e.g. CSE" />
+      </td>
+      <td>
+        <input type="text" class="inline-edit" value="${uni}"
+          data-field="university" data-username="${escapeHtml(s.github_username)}"
+          placeholder="e.g. CU" />
+      </td>
+      <td><span class="contrib-pts">+${s.total_score}</span></td>
+      <td>${s.pr_count}</td>
+      <td class="text-muted">${synced}</td>
+      <td>
+        <button class="btn-remove" onclick="removeStudent('${escapeHtml(s.github_username)}')" title="Remove student">Remove</button>
+      </td>
+    </tr>`;
+  }).join("");
+
+  // Wire inline-edit blur/enter to PATCH
+  body.querySelectorAll(".inline-edit").forEach(input => {
+    input.addEventListener("change", async () => {
+      const username = input.dataset.username;
+      const field    = input.dataset.field;
+      const value    = input.value.trim();
+      try {
+        await apiPost(`/api/students/${encodeURIComponent(username)}`, { [field]: value }, "PATCH");
+        input.classList.add("edit-saved");
+        setTimeout(() => input.classList.remove("edit-saved"), 1200);
+      } catch (err) {
+        input.classList.add("edit-error");
+        setTimeout(() => input.classList.remove("edit-error"), 1500);
+      }
+    });
+  });
+}
+
+function setupStudentsSearch(students) {
+  const searchInput = document.getElementById("students-search");
+  if (!searchInput) return;
+  searchInput.addEventListener("input", () => {
+    const q    = searchInput.value.toLowerCase();
+    const rows = document.querySelectorAll("#students-body tr");
+    rows.forEach(row => {
+      const username = row.dataset.username || "";
+      const name     = row.querySelector(".user-cell-name")?.textContent || "";
+      row.style.display = (username.includes(q) || name.toLowerCase().includes(q)) ? "" : "none";
+    });
+  });
+}
+
+async function removeStudent(username) {
+  if (!confirm(`Remove ${username} from the roster? This deletes all their contributions and scores.`)) return;
+  try {
+    await apiPost(`/api/students/${encodeURIComponent(username)}`, {}, "DELETE");
+    showToast(`${username} removed.`, "success");
+    loadStudents();
+  } catch (err) {
+    showToast(`Failed to remove ${username}: ${err.message}`, "error");
+  }
+}
+
+// Import students
+document.getElementById("btn-import")?.addEventListener("click", async () => {
+  const textarea    = document.getElementById("import-usernames");
+  const statusEl    = document.getElementById("import-status");
+  const resultsEl   = document.getElementById("import-results");
+  const btn         = document.getElementById("btn-import");
+
+  const raw       = (textarea.value || "").trim();
+  const usernames = raw.split(/[\n,]+/).map(u => u.trim()).filter(Boolean);
+  if (!usernames.length) {
+    statusEl.textContent = "Enter at least one username.";
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = "Importing...";
+  statusEl.textContent = `Fetching ${usernames.length} user(s) from GitHub...`;
+  resultsEl.innerHTML  = "";
+  resultsEl.classList.add("hidden");
+
+  try {
+    const data = await apiPost("/api/students/import", { usernames });
+    statusEl.textContent = `Done: ${data.imported} imported, ${data.failed} failed.`;
+
+    resultsEl.innerHTML = data.results.map(r => {
+      const cls  = r.status === "ok" ? "import-row-ok" : "import-row-err";
+      const icon = r.status === "ok" ? "✓" : "✗";
+      const msg  = r.status === "ok" ? `+${r.score} pts` : (r.message || "error");
+      return `<div class="import-row ${cls}"><span class="import-row-icon">${icon}</span><span class="import-row-username">@${escapeHtml(r.username)}</span><span class="import-row-msg">${escapeHtml(msg)}</span></div>`;
+    }).join("");
+    resultsEl.classList.remove("hidden");
+
+    if (data.imported > 0) {
+      textarea.value = "";
+      loadStudents();
+    }
+  } catch (err) {
+    statusEl.textContent = `Error: ${err.message}`;
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = "Import Students";
+  }
+});
+
+document.getElementById("btn-refresh-students")?.addEventListener("click", loadStudents);
+
+// Add-to-roster from profile
+document.getElementById("btn-add-roster")?.addEventListener("click", async () => {
+  const btn = document.getElementById("btn-add-roster");
+  if (!currentProfileUsername) return;
+  btn.disabled = true;
+  btn.textContent = "Adding...";
+  try {
+    await apiPost("/api/students/import", { usernames: [currentProfileUsername] });
+    btn.textContent = "Added!";
+    showToast(`${currentProfileUsername} added to roster.`, "success");
+    setTimeout(() => { btn.disabled = false; btn.textContent = "+ Add to Roster"; }, 2000);
+  } catch (err) {
+    btn.textContent = "Failed";
+    btn.disabled    = false;
+    showToast(`Failed: ${err.message}`, "error");
+  }
+});
+
+
+// =============================================================================
+// Mentor Dashboard
+// =============================================================================
+
+async function loadAnnotations() {
+  const bodyEl   = document.getElementById("mentor-body");
+  const countEl  = document.getElementById("mentor-count");
+  const emptyEl  = document.getElementById("mentor-empty");
+  if (!bodyEl) return;
+  countEl.textContent = "Loading...";
+  emptyEl.classList.add("hidden");
+  bodyEl.innerHTML = "";
+
+  const student  = (document.getElementById("mentor-filter-student")?.value  || "").trim();
+  const mentor   = (document.getElementById("mentor-filter-mentor")?.value   || "").trim();
+  const verified = document.getElementById("mentor-filter-verified")?.value  || "";
+
+  let url = "/api/annotations";
+  const params = [];
+  if (student)  params.push(`student=${encodeURIComponent(student)}`);
+  if (mentor)   params.push(`mentor=${encodeURIComponent(mentor)}`);
+  if (verified) params.push(`verified=${verified}`);
+  if (params.length) url += "?" + params.join("&");
+
+  try {
+    const data  = await apiFetch(url);
+    const items = data.annotations || [];
+    countEl.textContent = `${items.length} annotation(s)`;
+    if (items.length === 0) { emptyEl.classList.remove("hidden"); return; }
+    renderAnnotationRows(items);
+  } catch (err) {
+    countEl.textContent = "error";
+    console.error("loadAnnotations:", err);
+  }
+}
+
+function renderAnnotationRows(items) {
+  const body = document.getElementById("mentor-body");
+  body.innerHTML = items.map(a => {
+    const avatar = a.student_avatar
+      ? `<img src="${a.student_avatar}" class="row-avatar" alt="" loading="lazy" />`
+      : `<span class="row-avatar-placeholder"></span>`;
+    const verifiedBadge = a.verified
+      ? `<span class="verified-badge verified-yes">Verified</span>`
+      : `<span class="verified-badge verified-no">Unverified</span>`;
+    const date   = (a.annotated_at || "").slice(0, 10);
+    const title  = a.contribution_title
+      ? `<a href="${escapeHtml(a.contribution_url)}" target="_blank" rel="noopener" class="contrib-title">${escapeHtml(a.contribution_title)}</a>`
+      : "—";
+    const typeBadge = a.contribution_type === "pull_request"
+      ? `<span class="contrib-type-badge badge-pr">PR</span>`
+      : `<span class="contrib-type-badge badge-issue">Issue</span>`;
+    const override = a.score_override != null ? `<span class="contrib-pts">+${a.score_override}</span>` : "—";
+
+    return `<tr data-annot-id="${a.id}">
+      <td>
+        <div class="user-cell">
+          ${avatar}
+          <div class="user-cell-info">
+            <span class="user-cell-name">${escapeHtml(a.student_name || a.student_username)}</span>
+            <span class="user-cell-handle">@${escapeHtml(a.student_username)}</span>
+          </div>
+        </div>
+      </td>
+      <td>${typeBadge} ${title}</td>
+      <td class="text-muted">@${escapeHtml(a.mentor_username)}</td>
+      <td class="note-cell" title="${escapeHtml(a.note || "")}">${escapeHtml(a.note || "—")}</td>
+      <td>${override}</td>
+      <td>${verifiedBadge}</td>
+      <td class="text-muted">${date}</td>
+      <td class="action-cell">
+        <button class="btn-verify ${a.verified ? 'btn-unverify' : ''}"
+          onclick="toggleVerify(${a.id}, ${a.verified ? 0 : 1})"
+          title="${a.verified ? 'Mark unverified' : 'Mark verified'}">
+          ${a.verified ? "Unverify" : "Verify"}
+        </button>
+        <button class="btn-remove" onclick="deleteAnnotation(${a.id})" title="Delete annotation">Delete</button>
+      </td>
+    </tr>`;
+  }).join("");
+}
+
+async function toggleVerify(annotId, newVerified) {
+  try {
+    await apiPost(`/api/annotations/${annotId}`, { verified: newVerified }, "PATCH");
+    showToast(newVerified ? "Marked as verified." : "Marked as unverified.", "success");
+    loadAnnotations();
+  } catch (err) {
+    showToast(`Failed: ${err.message}`, "error");
+  }
+}
+
+async function deleteAnnotation(annotId) {
+  if (!confirm("Delete this annotation? This cannot be undone.")) return;
+  try {
+    await apiPost(`/api/annotations/${annotId}`, {}, "DELETE");
+    showToast("Annotation deleted.", "success");
+    loadAnnotations();
+  } catch (err) {
+    showToast(`Failed: ${err.message}`, "error");
+  }
+}
+
+document.getElementById("btn-mentor-filter")?.addEventListener("click", loadAnnotations);
+document.getElementById("btn-mentor-clear")?.addEventListener("click", () => {
+  document.getElementById("mentor-filter-student").value  = "";
+  document.getElementById("mentor-filter-mentor").value   = "";
+  document.getElementById("mentor-filter-verified").value = "";
+  loadAnnotations();
+});
+document.getElementById("btn-refresh-mentor")?.addEventListener("click", loadAnnotations);
+
+
+// =============================================================================
+// Toast notifications
+// =============================================================================
+
+function showToast(message, type = "info") {
+  let container = document.getElementById("toast-container");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "toast-container";
+    document.body.appendChild(container);
+  }
+  const toast = document.createElement("div");
+  toast.className = `toast toast-${type}`;
+  toast.textContent = message;
+  container.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add("toast-visible"));
+  setTimeout(() => {
+    toast.classList.remove("toast-visible");
+    toast.addEventListener("transitionend", () => toast.remove());
+  }, 3500);
+}
+
+
+// =============================================================================
+// Generic API helper (POST / PATCH / DELETE with JSON body)
+// =============================================================================
+
+async function apiPost(path, body = {}, method = "POST") {
+  const opts = { method, headers: { "Content-Type": "application/json" } };
+  if (method !== "DELETE") opts.body = JSON.stringify(body);
+  const res  = await fetch(`${API_BASE}${path}`, opts);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || data.error || `HTTP ${res.status}`);
+  return data;
+}

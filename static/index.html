@@ -22,7 +22,9 @@
       </div>
       <div class="nav-links">
         <a href="#leaderboard" class="nav-link active" id="nav-leaderboard">Leaderboard</a>
-        <a href="#profile" class="nav-link" id="nav-profile">Profile</a>
+        <a href="#profile"     class="nav-link" id="nav-profile">Profile</a>
+        <a href="#students"    class="nav-link" id="nav-students">Students</a>
+        <a href="#mentor"      class="nav-link" id="nav-mentor">Mentor</a>
       </div>
       <div class="nav-status" id="api-status">
         <span class="status-dot"></span>
@@ -138,7 +140,7 @@
             </svg>
           </div>
           <p class="empty-title">No contributors yet</p>
-          <p class="empty-body">Search for a GitHub username below to add them to the leaderboard.</p>
+          <p class="empty-body">Go to the <strong>Students</strong> tab to import GitHub usernames and populate the leaderboard.</p>
         </div>
       </div>
 
@@ -185,6 +187,7 @@
             <span class="score-badge-value" id="profile-total-score">0</span>
             <span class="score-badge-label">Total Score</span>
           </div>
+          <button class="btn-add-roster" id="btn-add-roster" title="Add to student roster">+ Add to Roster</button>
         </div>
 
         <!-- Score breakdown -->
@@ -260,6 +263,139 @@
       <div class="profile-loading hidden" id="profile-loading">
         <div class="spinner"></div>
         <p>Fetching from GitHub...</p>
+      </div>
+
+    </section>
+
+    <!-- ======================== STUDENTS VIEW ======================== -->
+    <section class="view" id="view-students">
+
+      <div class="section-header">
+        <div>
+          <h1 class="section-title">Student Roster</h1>
+          <p class="section-subtitle">Import GitHub usernames, set departments, and manage tracked students.</p>
+        </div>
+        <div class="header-controls">
+          <button class="btn-primary" id="btn-refresh-students">Refresh</button>
+        </div>
+      </div>
+
+      <!-- Import panel -->
+      <div class="import-panel">
+        <div class="import-panel-header">
+          <h3 class="import-panel-title">Bulk Import</h3>
+          <p class="import-panel-sub">Paste GitHub usernames, one per line. Each user will be fetched from GitHub and added to the roster.</p>
+        </div>
+        <textarea
+          id="import-usernames"
+          class="import-textarea"
+          placeholder="bytebymanas
+alice
+bob"
+          rows="5"
+        ></textarea>
+        <div class="import-actions">
+          <button class="btn-primary" id="btn-import">Import Students</button>
+          <span class="import-status" id="import-status"></span>
+        </div>
+        <div class="import-results hidden" id="import-results"></div>
+      </div>
+
+      <!-- Roster table -->
+      <div class="table-wrapper" style="margin-top: var(--space-5)">
+        <div class="table-toolbar">
+          <span class="table-count" id="students-count">Loading...</span>
+          <div class="toolbar-right">
+            <div class="search-box">
+              <svg class="search-icon" viewBox="0 0 20 20" fill="none">
+                <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M13 13l3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+              <input type="text" id="students-search" class="search-input" placeholder="Filter by name..." autocomplete="off" />
+            </div>
+          </div>
+        </div>
+        <table class="data-table" id="students-table">
+          <thead>
+            <tr>
+              <th class="col-user">Student</th>
+              <th>Department</th>
+              <th>University</th>
+              <th class="col-score">Score</th>
+              <th class="col-prs">PRs</th>
+              <th>Last Synced</th>
+              <th class="col-action"></th>
+            </tr>
+          </thead>
+          <tbody id="students-body"></tbody>
+        </table>
+        <div class="empty-state hidden" id="students-empty">
+          <p class="empty-title">No students tracked</p>
+          <p class="empty-body">Use the import panel above to add GitHub usernames.</p>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ======================== MENTOR VIEW ======================== -->
+    <section class="view" id="view-mentor">
+
+      <div class="section-header">
+        <div>
+          <h1 class="section-title">Mentor Dashboard</h1>
+          <p class="section-subtitle">Review, verify, and manage all contribution annotations across all students.</p>
+        </div>
+        <div class="header-controls">
+          <button class="btn-primary" id="btn-refresh-mentor">Refresh</button>
+        </div>
+      </div>
+
+      <!-- Filter bar -->
+      <div class="mentor-filters">
+        <div class="mentor-filter-field">
+          <label class="annot-label" for="mentor-filter-student">Student</label>
+          <input type="text" id="mentor-filter-student" class="annot-input" placeholder="github username" autocomplete="off" />
+        </div>
+        <div class="mentor-filter-field">
+          <label class="annot-label" for="mentor-filter-mentor">Mentor</label>
+          <input type="text" id="mentor-filter-mentor" class="annot-input" placeholder="mentor username" autocomplete="off" />
+        </div>
+        <div class="mentor-filter-field">
+          <label class="annot-label" for="mentor-filter-verified">Status</label>
+          <select id="mentor-filter-verified" class="dept-select">
+            <option value="">All</option>
+            <option value="1">Verified</option>
+            <option value="0">Unverified</option>
+          </select>
+        </div>
+        <button class="btn-primary btn-sm" id="btn-mentor-filter">Apply</button>
+        <button class="btn-secondary btn-sm" id="btn-mentor-clear">Clear</button>
+      </div>
+
+      <!-- Annotations table -->
+      <div class="table-wrapper" style="margin-top: var(--space-4)">
+        <div class="table-toolbar">
+          <span class="table-count" id="mentor-count">Loading...</span>
+        </div>
+        <table class="data-table" id="mentor-table">
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Contribution</th>
+              <th>Mentor</th>
+              <th>Note</th>
+              <th>Override</th>
+              <th>Status</th>
+              <th>Date</th>
+              <th class="col-action"></th>
+            </tr>
+          </thead>
+          <tbody id="mentor-body"></tbody>
+        </table>
+        <div class="empty-state hidden" id="mentor-empty">
+          <p class="empty-title">No annotations found</p>
+          <p class="empty-body">Annotations appear here after mentors annotate contributions in the Profile tab.</p>
+        </div>
       </div>
 
     </section>
