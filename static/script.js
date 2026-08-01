@@ -339,7 +339,7 @@ async function fetchContributions(username) {
       const rowId  = `annot-row-${contribId}`;
       const formId = `annot-form-${contribId}`;
 
-      return `<tr data-contrib-id="${contribId}">
+      return `<tr data-contrib-id="${contribId}" data-contrib-type="${item.type || ''}">
         <td>${badge}</td>
         <td>${titleHtml}</td>
         <td><span class="contrib-repo">${escapeHtml(item.repo || "—")}</span></td>
@@ -1104,3 +1104,112 @@ function renderProfileTimeline(contributions) {
     },
   });
 }
+
+// =============================================================================
+// Settings Tab
+// =============================================================================
+
+const DEFAULTS = { pr_points: 10, issue_points: 3, review_points: 5, first_contrib_bonus: 5 };
+
+async function loadSettings() {
+  try {
+    const data    = await apiFetch("/api/settings/weights");
+    const weights = data.weights || DEFAULTS;
+    document.getElementById("weight-pr").value     = weights.pr_points;
+    document.getElementById("weight-issue").value  = weights.issue_points;
+    document.getElementById("weight-review").value = weights.review_points;
+    document.getElementById("weight-first").value  = weights.first_contrib_bonus;
+  } catch (_) {}
+}
+
+document.getElementById("btn-save-weights")?.addEventListener("click", async () => {
+  const feedback = document.getElementById("settings-feedback");
+  const payload  = {
+    pr_points:           Number(document.getElementById("weight-pr").value),
+    issue_points:        Number(document.getElementById("weight-issue").value),
+    review_points:       Number(document.getElementById("weight-review").value),
+    first_contrib_bonus: Number(document.getElementById("weight-first").value),
+  };
+  try {
+    await apiPost("/api/settings/weights", payload);
+    feedback.textContent = "Saved.";
+    feedback.className   = "settings-feedback settings-feedback-ok";
+    feedback.classList.remove("hidden");
+    showToast("Scoring weights saved.", "success");
+    setTimeout(() => feedback.classList.add("hidden"), 2500);
+  } catch (err) {
+    feedback.textContent = `Error: ${err.message}`;
+    feedback.className   = "settings-feedback settings-feedback-err";
+    feedback.classList.remove("hidden");
+  }
+});
+
+document.getElementById("btn-reset-weights")?.addEventListener("click", async () => {
+  try {
+    await apiPost("/api/settings/weights", DEFAULTS);
+    loadSettings();
+    showToast("Weights reset to defaults.", "info");
+  } catch (err) {
+    showToast(`Reset failed: ${err.message}`, "error");
+  }
+});
+
+
+// =============================================================================
+// Contribution type filter (profile view)
+// =============================================================================
+
+let allContribItems = [];
+
+document.getElementById("contrib-type-filter")?.addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-type]");
+  if (!btn) return;
+  document.querySelectorAll("#contrib-type-filter .filter-btn").forEach(b =>
+    b.classList.toggle("active", b === btn)
+  );
+  filterContribsByType(btn.dataset.type);
+});
+
+function filterContribsByType(type) {
+  const rows = document.querySelectorAll("#contrib-body tr[data-contrib-id]");
+  const formRows = document.querySelectorAll("#contrib-body tr.annot-form-row");
+  rows.forEach(row => {
+    const itemType = row.dataset.contribType || "";
+    const show = type === "all" || itemType === type;
+    row.style.display = show ? "" : "none";
+    // Also hide the matching annotation form row if present
+    const formRow = document.getElementById(`annot-row-${row.dataset.contribId}`);
+    if (formRow) formRow.style.display = show ? "" : "none";
+  });
+}
+
+
+// =============================================================================
+// Wire Settings into navigation + showView
+// =============================================================================
+
+// Patch showView to also handle settings
+const _origShowView = showView;
+// Override: re-declare showView in global scope to include settings
+window.showView = function(name) {
+  const viewSettings = document.getElementById("view-settings");
+  const navSettings  = document.getElementById("nav-settings");
+  Object.entries(VIEWS).forEach(([key, refs]) => {
+    const isActive = key === name;
+    refs.view().classList.toggle("active", isActive);
+    refs.nav().classList.toggle("active", isActive);
+  });
+  if (viewSettings) viewSettings.classList.toggle("active", name === "settings");
+  if (navSettings)  navSettings.classList.toggle("active",  name === "settings");
+  if (name === "students") loadStudents();
+  if (name === "mentor")   loadAnnotations();
+  if (name === "settings") loadSettings();
+};
+
+document.getElementById("nav-settings")?.addEventListener("click", (e) => {
+  e.preventDefault();
+  window.showView("settings");
+});
+
+// Store contrib type on each row for the filter to work
+// Patch: set data-contrib-type and data-contrib-id on rendered rows

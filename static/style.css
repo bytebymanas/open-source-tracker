@@ -1567,3 +1567,101 @@ input { font-family: inherit; }
   .profile-charts { grid-template-columns: 1fr; }
   .chart-wrap-bar { height: 180px; }
 }
+
+/* ============================================================
+   Settings Tab
+   ============================================================ */
+
+.settings-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  max-width: 680px;
+}
+
+.settings-section-title {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.settings-desc {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin: 0 0 var(--space-5) 0;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+@media (max-width: 540px) {
+  .settings-grid { grid-template-columns: 1fr; }
+}
+
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.settings-label {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.settings-input-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.settings-input {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  padding: var(--space-2) var(--space-3);
+  width: 80px;
+  transition: border-color 0.15s;
+}
+.settings-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.settings-unit {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.settings-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.settings-feedback {
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+.settings-feedback-ok  { color: #22c55e; }
+.settings-feedback-err { color: #ef4444; }
+
+/* ============================================================
+   Contribution type filter (profile)
+   ============================================================ */
+
+.contrib-type-filter {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}

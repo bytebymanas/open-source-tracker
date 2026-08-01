@@ -719,3 +719,58 @@ def delete_annotation(annotation_id):
         return jsonify({"error": "not_found",
                         "message": f"Annotation {annotation_id} not found"}), 404
     return jsonify({"status": "ok", "annotation_id": annotation_id, "deleted": True})
+
+
+# =============================================================================
+# Settings — Scoring Weights
+# =============================================================================
+
+# Default weights stored in-memory; can be overridden via API.
+# In production these would be persisted in the DB.
+_SCORING_WEIGHTS = {
+    "pr_points":           10,
+    "issue_points":        3,
+    "review_points":       5,
+    "first_contrib_bonus": 5,
+}
+
+
+@api.route("/settings/weights", methods=["GET"])
+def get_weights():
+    """GET /api/settings/weights — Return current scoring weights."""
+    return jsonify({"weights": dict(_SCORING_WEIGHTS)})
+
+
+@api.route("/settings/weights", methods=["POST"])
+def update_weights():
+    """
+    POST /api/settings/weights
+    Body: {"pr_points": 12, "issue_points": 4, ...}
+    Update one or more scoring weights.
+    """
+    body = request.get_json(silent=True) or {}
+    valid_keys = set(_SCORING_WEIGHTS.keys())
+    updated = {}
+    errors  = {}
+    for key, val in body.items():
+        if key not in valid_keys:
+            errors[key] = "unknown field"
+            continue
+        if not isinstance(val, (int, float)) or val < 0:
+            errors[key] = "must be a non-negative number"
+            continue
+        _SCORING_WEIGHTS[key] = val
+        updated[key] = val
+
+    if not body:
+        return jsonify({"error": "invalid_payload", "message": "Provide at least one weight field"}), 400
+
+    if errors and not updated:
+        return jsonify({"error": "invalid_payload", "fields": errors}), 400
+
+    return jsonify({
+        "status":  "ok",
+        "updated": updated,
+        "weights": dict(_SCORING_WEIGHTS),
+        "errors":  errors if errors else None,
+    })

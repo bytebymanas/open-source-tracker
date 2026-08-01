@@ -26,6 +26,7 @@
         <a href="#profile"     class="nav-link" id="nav-profile">Profile</a>
         <a href="#students"    class="nav-link" id="nav-students">Students</a>
         <a href="#mentor"      class="nav-link" id="nav-mentor">Mentor</a>
+        <a href="#settings"    class="nav-link" id="nav-settings">Settings</a>
       </div>
       <div class="nav-status" id="api-status">
         <span class="status-dot"></span>
@@ -243,6 +244,12 @@
             <h3 class="profile-section-title">Contributions</h3>
             <span class="profile-section-count" id="contrib-count">—</span>
           </div>
+          <!-- Type filter -->
+          <div class="contrib-type-filter" id="contrib-type-filter">
+            <button class="filter-btn active" data-type="all">All</button>
+            <button class="filter-btn" data-type="pull_request">PRs only</button>
+            <button class="filter-btn" data-type="issue">Issues only</button>
+          </div>
           <div class="contrib-loading hidden" id="contrib-loading">
             <div class="spinner spinner-sm"></div>
             <span>Loading contributions...</span>
@@ -423,6 +430,60 @@ bob"
         <div class="empty-state hidden" id="mentor-empty">
           <p class="empty-title">No annotations found</p>
           <p class="empty-body">Annotations appear here after mentors annotate contributions in the Profile tab.</p>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ======================== SETTINGS VIEW ======================== -->
+    <section class="view" id="view-settings">
+
+      <div class="section-header">
+        <div>
+          <h1 class="section-title">Settings</h1>
+          <p class="section-subtitle">Configure scoring weights used to calculate contribution points.</p>
+        </div>
+      </div>
+
+      <div class="settings-panel">
+        <div class="settings-section-title">Scoring Weights</div>
+        <p class="settings-desc">Changes apply to new score calculations. Existing scores are recalculated on next profile sync.</p>
+
+        <div class="settings-grid">
+          <div class="settings-field">
+            <label class="settings-label" for="weight-pr">Merged PR Points</label>
+            <div class="settings-input-row">
+              <input type="number" id="weight-pr" class="settings-input" min="0" max="100" placeholder="10" />
+              <span class="settings-unit">pts each</span>
+            </div>
+          </div>
+          <div class="settings-field">
+            <label class="settings-label" for="weight-issue">Closed Issue Points</label>
+            <div class="settings-input-row">
+              <input type="number" id="weight-issue" class="settings-input" min="0" max="100" placeholder="3" />
+              <span class="settings-unit">pts each</span>
+            </div>
+          </div>
+          <div class="settings-field">
+            <label class="settings-label" for="weight-review">Code Review Points</label>
+            <div class="settings-input-row">
+              <input type="number" id="weight-review" class="settings-input" min="0" max="100" placeholder="5" />
+              <span class="settings-unit">pts each</span>
+            </div>
+          </div>
+          <div class="settings-field">
+            <label class="settings-label" for="weight-first">First Contribution Bonus</label>
+            <div class="settings-input-row">
+              <input type="number" id="weight-first" class="settings-input" min="0" max="100" placeholder="5" />
+              <span class="settings-unit">pts bonus</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-actions">
+          <button class="btn-primary" id="btn-save-weights">Save Weights</button>
+          <button class="btn-secondary" id="btn-reset-weights">Reset to Defaults</button>
+          <span class="settings-feedback hidden" id="settings-feedback"></span>
         </div>
       </div>
 
