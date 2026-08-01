@@ -106,6 +106,7 @@ async function loadLeaderboard(period = "all_time", department = "") {
     allRows = data.leaderboard || [];
     renderTable(allRows);
     updateStats(allRows);
+    renderLeaderboardChart(allRows);
   } catch (err) {
     leaderboardBody.innerHTML = `
       <tr><td colspan="8" style="text-align:center;padding:32px;color:var(--color-error)">
@@ -274,6 +275,13 @@ async function fetchProfile(username) {
     document.getElementById("profile-issues").textContent      = data.score?.issues_closed ?? 0;
     document.getElementById("profile-reviews").textContent     = data.score?.reviews ?? 0;
 
+    // Donut chart — contribution type breakdown
+    renderProfileDonut(
+      data.score?.merged_prs    ?? 0,
+      data.score?.issues_closed ?? 0,
+      data.score?.reviews       ?? 0,
+    );
+
     profileCard.classList.remove("hidden");
 
     // Fetch sub-sections in parallel
@@ -382,6 +390,7 @@ async function fetchContributions(username) {
     }).join("");
 
     tableEl.classList.remove("hidden");
+    renderProfileTimeline(items);
   } catch (err) {
     countEl.textContent = "error";
     emptyEl.querySelector(".empty-body").textContent = `Failed to load: ${err.message}`;
@@ -868,4 +877,230 @@ async function apiPost(path, body = {}, method = "POST") {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.message || data.error || `HTTP ${res.status}`);
   return data;
+}
+
+// =============================================================================
+// Chart.js — shared config
+// =============================================================================
+
+const CHART_DEFAULTS = {
+  color: {
+    accent:  "#6366f1",
+    green:   "#22c55e",
+    orange:  "#f97316",
+    blue:    "#38bdf8",
+    purple:  "#a78bfa",
+    muted:   "rgba(148,163,184,0.15)",
+    text:    "#94a3b8",
+    grid:    "rgba(148,163,184,0.10)",
+  },
+};
+
+Chart.defaults.color        = CHART_DEFAULTS.color.text;
+Chart.defaults.font.family  = "Inter, system-ui, sans-serif";
+Chart.defaults.font.size    = 12;
+
+let leaderboardChartInstance = null;
+let profileDonutInstance     = null;
+let profileTimelineInstance  = null;
+
+function destroyChart(instance) {
+  if (instance) { try { instance.destroy(); } catch (_) {} }
+  return null;
+}
+
+// =============================================================================
+// Leaderboard bar chart
+// =============================================================================
+
+function renderLeaderboardChart(rows) {
+  const canvas = document.getElementById("leaderboard-chart");
+  const panel  = document.getElementById("leaderboard-chart-panel");
+  if (!canvas || !rows || rows.length === 0) {
+    if (panel) panel.style.display = "none";
+    return;
+  }
+
+  panel.style.display = "";
+  leaderboardChartInstance = destroyChart(leaderboardChartInstance);
+
+  const top = rows.slice(0, 10);
+  const labels = top.map(r => r.github_username || r.name || "—");
+  const scores = top.map(r => r.total_score || 0);
+  const prs    = top.map(r => r.pr_count    || 0);
+  const issues = top.map(r => r.issue_count || 0);
+
+  leaderboardChartInstance = new Chart(canvas, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "PRs",
+          data: prs.map((p, i) => p * 10),
+          backgroundColor: CHART_DEFAULTS.color.accent,
+          borderRadius: 4,
+          stack: "score",
+        },
+        {
+          label: "Issues",
+          data: issues.map(i => i * 3),
+          backgroundColor: CHART_DEFAULTS.color.green,
+          borderRadius: 4,
+          stack: "score",
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 600, easing: "easeOutQuart" },
+      plugins: {
+        legend: { position: "top", align: "end", labels: { boxWidth: 12, padding: 16 } },
+        tooltip: {
+          callbacks: {
+            footer: (items) => {
+              const total = items.reduce((s, i) => s + i.raw, 0);
+              return `Total: ${scores[items[0].dataIndex]} pts`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          stacked: true,
+          grid: { color: CHART_DEFAULTS.color.grid },
+          ticks: { maxRotation: 30 },
+        },
+        y: {
+          stacked: true,
+          grid: { color: CHART_DEFAULTS.color.grid },
+          ticks: { precision: 0 },
+          title: { display: true, text: "Points" },
+        },
+      },
+    },
+  });
+}
+
+// =============================================================================
+// Profile donut chart (contribution breakdown)
+// =============================================================================
+
+function renderProfileDonut(prs, issues, reviews) {
+  const canvas = document.getElementById("profile-donut-chart");
+  if (!canvas) return;
+  profileDonutInstance = destroyChart(profileDonutInstance);
+
+  const total = prs + issues + reviews;
+  if (total === 0) {
+    canvas.parentElement.parentElement.style.display = "none";
+    return;
+  }
+  canvas.parentElement.parentElement.style.display = "";
+
+  profileDonutInstance = new Chart(canvas, {
+    type: "doughnut",
+    data: {
+      labels: ["Merged PRs", "Issues Closed", "Code Reviews"],
+      datasets: [{
+        data: [prs, issues, reviews],
+        backgroundColor: [
+          CHART_DEFAULTS.color.accent,
+          CHART_DEFAULTS.color.green,
+          CHART_DEFAULTS.color.orange,
+        ],
+        borderWidth: 0,
+        hoverOffset: 6,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: "65%",
+      animation: { duration: 700, easing: "easeOutQuart" },
+      plugins: {
+        legend: {
+          position: "bottom",
+          labels: { boxWidth: 12, padding: 14 },
+        },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => ` ${ctx.label}: ${ctx.raw}`,
+          },
+        },
+      },
+    },
+  });
+}
+
+// =============================================================================
+// Profile activity timeline (contributions by month)
+// =============================================================================
+
+function renderProfileTimeline(contributions) {
+  const canvas = document.getElementById("profile-timeline-chart");
+  if (!canvas) return;
+  profileTimelineInstance = destroyChart(profileTimelineInstance);
+
+  if (!contributions || contributions.length === 0) {
+    canvas.parentElement.parentElement.style.display = "none";
+    return;
+  }
+  canvas.parentElement.parentElement.style.display = "";
+
+  // Bucket by year-month
+  const buckets = {};
+  contributions.forEach(c => {
+    const date = (c.contributed_at || c.created_at || "").slice(0, 7); // "YYYY-MM"
+    if (!date) return;
+    if (!buckets[date]) buckets[date] = { pr: 0, issue: 0 };
+    if (c.type === "pull_request") buckets[date].pr++;
+    else buckets[date].issue++;
+  });
+
+  const sorted = Object.keys(buckets).sort();
+  const labels = sorted.map(d => {
+    const [y, m] = d.split("-");
+    return new Date(+y, +m - 1).toLocaleString("default", { month: "short", year: "2-digit" });
+  });
+
+  profileTimelineInstance = new Chart(canvas, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "PRs",
+          data: sorted.map(d => buckets[d].pr),
+          backgroundColor: CHART_DEFAULTS.color.accent,
+          borderRadius: 3,
+          stack: "activity",
+        },
+        {
+          label: "Issues",
+          data: sorted.map(d => buckets[d].issue),
+          backgroundColor: CHART_DEFAULTS.color.green,
+          borderRadius: 3,
+          stack: "activity",
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 600 },
+      plugins: {
+        legend: { position: "top", align: "end", labels: { boxWidth: 12, padding: 14 } },
+      },
+      scales: {
+        x: { stacked: true, grid: { color: CHART_DEFAULTS.color.grid } },
+        y: {
+          stacked: true,
+          grid: { color: CHART_DEFAULTS.color.grid },
+          ticks: { precision: 0 },
+        },
+      },
+    },
+  });
 }

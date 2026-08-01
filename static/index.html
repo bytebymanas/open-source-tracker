@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -70,6 +71,17 @@
         <div class="stat-card">
           <span class="stat-value" id="stat-top-score">—</span>
           <span class="stat-label">Top Score</span>
+        </div>
+      </div>
+
+      <!-- Leaderboard chart -->
+      <div class="chart-panel" id="leaderboard-chart-panel">
+        <div class="chart-panel-header">
+          <span class="chart-panel-title">Top Contributors</span>
+          <span class="chart-panel-sub">Score comparison for top 10</span>
+        </div>
+        <div class="chart-wrap chart-wrap-bar">
+          <canvas id="leaderboard-chart"></canvas>
         </div>
       </div>
 
@@ -206,6 +218,22 @@
             <span class="score-item-value" id="profile-reviews">0</span>
             <span class="score-item-label">Code Reviews</span>
             <span class="score-item-pts">×5 pts</span>
+          </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="profile-charts">
+          <div class="chart-card">
+            <div class="chart-card-title">Contribution Breakdown</div>
+            <div class="chart-wrap chart-wrap-donut">
+              <canvas id="profile-donut-chart"></canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-card-title">Activity Timeline</div>
+            <div class="chart-wrap chart-wrap-timeline">
+              <canvas id="profile-timeline-chart"></canvas>
+            </div>
           </div>
         </div>
 

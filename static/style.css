@@ -1503,3 +1503,67 @@ input { font-family: inherit; }
 .toast-success { border-left: 3px solid #22c55e; }
 .toast-error   { border-left: 3px solid #ef4444; }
 .toast-info    { border-left: 3px solid var(--color-accent); }
+
+/* ============================================================
+   Charts (Chart.js panels)
+   ============================================================ */
+
+.chart-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  margin-bottom: var(--space-5);
+}
+
+.chart-panel-header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.chart-panel-title {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.chart-panel-sub {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.chart-wrap { position: relative; }
+.chart-wrap-bar      { height: 220px; }
+.chart-wrap-donut    { height: 200px; }
+.chart-wrap-timeline { height: 180px; }
+
+/* Profile — two-column chart grid */
+.profile-charts {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.chart-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+}
+
+.chart-card-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+@media (max-width: 640px) {
+  .profile-charts { grid-template-columns: 1fr; }
+  .chart-wrap-bar { height: 180px; }
+}
