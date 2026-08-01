@@ -17,6 +17,7 @@ from unittest.mock import patch
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src.main import app
+from fastapi.testclient import TestClient
 from src.api.webhook import verify_signature
 
 
@@ -26,8 +27,8 @@ from src.api.webhook import verify_signature
 
 @pytest.fixture
 def client():
-    app.config["TESTING"] = True
-    with app.test_client() as c:
+    # app.config["TESTING"] = True
+    with TestClient(app) as c:
         yield c
 
 
@@ -47,9 +48,9 @@ def post_webhook(client, payload: dict, event: str = "push",
     sig  = sig_override if sig_override is not None else make_signature(body, secret)
     return client.post(
         "/webhook/github",
-        data=body,
-        content_type="application/json",
+        content=body,
         headers={
+            "Content-Type": "application/json",
             "X-GitHub-Event":       event,
             "X-Hub-Signature-256":  sig,
         },
@@ -107,20 +108,20 @@ class TestWebhookRoute:
         with patch.dict(os.environ, {"GITHUB_WEBHOOK_SECRET": SECRET}):
             res = post_webhook(client, {"zen": "Keep it logically awesome."}, event="ping")
         assert res.status_code == 200
-        assert res.get_json()["message"] == "pong"
+        assert res.json()["message"] == "pong"
 
     def test_invalid_signature_returns_401(self, client):
         with patch.dict(os.environ, {"GITHUB_WEBHOOK_SECRET": SECRET}):
             res = post_webhook(client, {}, sig_override="sha256=badsig")
         assert res.status_code == 401
-        assert res.get_json()["error"] == "invalid_signature"
+        assert res.json()["error"] == "invalid_signature"
 
     def test_pull_request_event_returns_200(self, client):
         payload = {"action": "closed", "pull_request": {"html_url": "https://github.com/test/repo/pull/1"}}
         with patch.dict(os.environ, {"GITHUB_WEBHOOK_SECRET": SECRET}):
             res = post_webhook(client, payload, event="pull_request")
         assert res.status_code == 200
-        assert res.get_json()["event"] == "pull_request"
+        assert res.json()["event"] == "pull_request"
 
     @patch("src.api.webhook.Database")
     def test_issues_event_returns_200(self, MockDB, client):
@@ -131,25 +132,25 @@ class TestWebhookRoute:
         with patch.dict(os.environ, {"GITHUB_WEBHOOK_SECRET": SECRET}):
             res = post_webhook(client, payload, event="issues")
         assert res.status_code == 200
-        assert res.get_json()["event"] == "issues"
+        assert res.json()["event"] == "issues"
 
     def test_unknown_event_is_ignored(self, client):
         with patch.dict(os.environ, {"GITHUB_WEBHOOK_SECRET": SECRET}):
             res = post_webhook(client, {}, event="star")
         assert res.status_code == 200
-        assert res.get_json()["status"] == "ignored"
+        assert res.json()["status"] == "ignored"
 
     def test_action_echoed_in_pull_request_response(self, client):
         payload = {"action": "synchronize", "pull_request": {}}
         with patch.dict(os.environ, {"GITHUB_WEBHOOK_SECRET": SECRET}):
             res = post_webhook(client, payload, event="pull_request")
-        assert res.get_json()["action"] == "synchronize"
+        assert res.json()["action"] == "synchronize"
 
     def test_action_echoed_in_issues_response(self, client):
         payload = {"action": "reopened", "issue": {}}
         with patch.dict(os.environ, {"GITHUB_WEBHOOK_SECRET": SECRET}):
             res = post_webhook(client, payload, event="issues")
-        assert res.get_json()["action"] == "reopened"
+        assert res.json()["action"] == "reopened"
 
 
 # ---------------------------------------------------------------------------
@@ -191,7 +192,7 @@ class TestWebhookEventParsing:
         mock_db.upsert_contribution.return_value = 42
         with patch.dict(os.environ, {"GITHUB_WEBHOOK_SECRET": SECRET}):
             res = post_webhook(client, MERGED_PR_PAYLOAD, event="pull_request")
-        data = res.get_json()
+        data = res.json()
         assert res.status_code == 200
         assert data["persisted"] is True
         assert data["contrib_id"] == 42
@@ -203,7 +204,7 @@ class TestWebhookEventParsing:
         payload = {**MERGED_PR_PAYLOAD, "action": "opened"}
         with patch.dict(os.environ, {"GITHUB_WEBHOOK_SECRET": SECRET}):
             res = post_webhook(client, payload, event="pull_request")
-        assert res.get_json()["persisted"] is False
+        assert res.json()["persisted"] is False
         MockDB.return_value.upsert_contribution.assert_not_called()
 
     @patch("src.api.webhook.Database")
@@ -216,7 +217,7 @@ class TestWebhookEventParsing:
         }
         with patch.dict(os.environ, {"GITHUB_WEBHOOK_SECRET": SECRET}):
             res = post_webhook(client, payload, event="pull_request")
-        assert res.get_json()["persisted"] is False
+        assert res.json()["persisted"] is False
 
     @patch("src.api.webhook.Database")
     def test_closed_issue_is_persisted(self, MockDB, client):
@@ -226,7 +227,7 @@ class TestWebhookEventParsing:
         mock_db.upsert_contribution.return_value = 77
         with patch.dict(os.environ, {"GITHUB_WEBHOOK_SECRET": SECRET}):
             res = post_webhook(client, CLOSED_ISSUE_PAYLOAD, event="issues")
-        data = res.get_json()
+        data = res.json()
         assert res.status_code == 200
         assert data["persisted"] is True
         assert data["contrib_id"] == 77
@@ -237,7 +238,7 @@ class TestWebhookEventParsing:
         payload = {**CLOSED_ISSUE_PAYLOAD, "action": "opened"}
         with patch.dict(os.environ, {"GITHUB_WEBHOOK_SECRET": SECRET}):
             res = post_webhook(client, payload, event="issues")
-        assert res.get_json()["persisted"] is False
+        assert res.json()["persisted"] is False
         MockDB.return_value.upsert_contribution.assert_not_called()
 
     @patch("src.api.webhook.Database")
@@ -247,7 +248,7 @@ class TestWebhookEventParsing:
         with patch.dict(os.environ, {"GITHUB_WEBHOOK_SECRET": SECRET}):
             res = post_webhook(client, payload, event="pull_request")
         assert res.status_code == 400
-        assert res.get_json()["error"] == "invalid_payload"
+        assert res.json()["error"] == "invalid_payload"
 
     @patch("src.api.webhook.Database")
     def test_issue_missing_sender_returns_400(self, MockDB, client):

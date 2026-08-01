@@ -15,6 +15,7 @@ from unittest.mock import patch, MagicMock
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src.main import app
+from fastapi.testclient import TestClient
 from src.models.database import Database
 from src.utils.scoring import ScoringEngine
 from src.utils.cache import Cache
@@ -26,8 +27,8 @@ from src.utils.cache import Cache
 
 @pytest.fixture
 def client():
-    app.config["TESTING"] = True
-    with app.test_client() as c:
+    # app.config["TESTING"] = True
+    with TestClient(app) as c:
         yield c
 
 
@@ -188,7 +189,7 @@ class TestFullAPIPipeline:
         from src.utils.cache import default_cache
         default_cache.delete("user:testcontributor")
 
-        data = client.get("/api/user/testcontributor").get_json()
+        data = client.get("/api/user/testcontributor").json()
         assert data["score"]["total"] == 36
 
     @patch("src.api.routes.github")
@@ -201,7 +202,7 @@ class TestFullAPIPipeline:
         from src.utils.cache import default_cache
         default_cache.delete("contributions:testcontributor")
 
-        data = client.get("/api/user/testcontributor/contributions").get_json()
+        data = client.get("/api/user/testcontributor/contributions").json()
         assert data["total"] == len(GITHUB_PRS) + len(GITHUB_ISSUES)  # 5
 
     @patch("src.api.routes.github")
@@ -214,7 +215,7 @@ class TestFullAPIPipeline:
         from src.utils.cache import default_cache
         default_cache.delete("contributions:testcontributor")
 
-        data = client.get("/api/user/testcontributor/contributions").get_json()
+        data = client.get("/api/user/testcontributor/contributions").json()
         points = [c["points"] for c in data["contributions"]]
         assert points == sorted(points, reverse=True)
 
@@ -228,7 +229,7 @@ class TestFullAPIPipeline:
         from src.utils.cache import default_cache
         default_cache.delete("user:testcontributor")
 
-        data = client.get("/api/user/testcontributor").get_json()
+        data = client.get("/api/user/testcontributor").json()
         assert data["score"]["total"] == 0
 
     @patch("src.api.routes.github")
@@ -272,8 +273,8 @@ class TestCacheIntegration:
             "score": {"total": 99, "merged_prs": 9, "issues_closed": 3, "reviews": 0}
         })
 
-        app.config["TESTING"] = True
-        with app.test_client() as c:
+        # app.config["TESTING"] = True
+        with TestClient(app) as c:
             with patch("src.api.routes.github") as mock_gh:
                 res = c.get("/api/user/cached_user")
                 # GitHub should NOT be called — cache hit

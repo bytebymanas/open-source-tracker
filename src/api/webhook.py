@@ -1,5 +1,5 @@
 """
-GitHub Webhook Handler
+GitHub Webhook Handler (FastAPI)
 
 Receives and verifies incoming GitHub webhook events.
 
@@ -22,13 +22,14 @@ import logging
 import os
 from typing import Optional
 
-from flask import Blueprint, jsonify, request
+from fastapi import APIRouter, Request
+from fastapi.responses import JSONResponse
 from src.models.database import Database
 from src.utils.scoring import ScoringEngine
 
 logger = logging.getLogger(__name__)
 
-webhook = Blueprint("webhook", __name__, url_prefix="/webhook")
+router = APIRouter()
 
 
 # ---------------------------------------------------------------------------
@@ -71,8 +72,8 @@ def verify_signature(payload_bytes: bytes, signature_header: Optional[str]) -> b
 # Webhook endpoint
 # ---------------------------------------------------------------------------
 
-@webhook.route("/github", methods=["POST"])
-def github_webhook():
+@router.post("/github")
+async def github_webhook(request: Request):
     """
     Receive GitHub webhook events.
 
@@ -83,23 +84,25 @@ def github_webhook():
         JSON response with {"status": "ok"} on success.
         JSON response with {"error": "..."} on failure.
     """
-    payload_bytes = request.get_data()
+    payload_bytes = await request.body()
     signature     = request.headers.get("X-Hub-Signature-256")
     event_type    = request.headers.get("X-GitHub-Event", "")
 
     if not verify_signature(payload_bytes, signature):
         logger.warning("Webhook signature verification failed")
-        return jsonify({"error": "invalid_signature", "message": "Signature mismatch."}), 401
+        return JSONResponse(status_code=401, content={"error": "invalid_signature", "message": "Signature mismatch."})
 
     try:
-        payload = request.get_json(force=True, silent=True) or {}
+        payload = await request.json()
+        if not payload:
+            payload = {}
     except Exception:
-        return jsonify({"error": "invalid_payload", "message": "Could not parse JSON body."}), 400
+        return JSONResponse(status_code=400, content={"error": "invalid_payload", "message": "Could not parse JSON body."})
 
     logger.info("Received GitHub webhook event: %s", event_type)
 
     if event_type == "ping":
-        return jsonify({"status": "ok", "message": "pong"}), 200
+        return JSONResponse(status_code=200, content={"status": "ok", "message": "pong"})
 
     if event_type == "pull_request":
         return _handle_pull_request(payload)
@@ -107,7 +110,7 @@ def github_webhook():
     if event_type == "issues":
         return _handle_issue(payload)
 
-    return jsonify({"status": "ignored", "event": event_type}), 200
+    return JSONResponse(status_code=200, content={"status": "ignored", "event": event_type})
 
 
 # ---------------------------------------------------------------------------
@@ -130,12 +133,12 @@ def _handle_pull_request(payload: dict):
 
     if action != "closed" or not pr.get("merged"):
         logger.info("pull_request ignored: action=%s merged=%s", action, pr.get("merged"))
-        return jsonify({"status": "ok", "event": "pull_request", "action": action, "persisted": False}), 200
+        return JSONResponse(status_code=200, content={"status": "ok", "event": "pull_request", "action": action, "persisted": False})
 
     sender   = payload.get("sender", {})
     username = sender.get("login", "")
     if not username:
-        return jsonify({"error": "invalid_payload", "message": "sender.login missing"}), 400
+        return JSONResponse(status_code=400, content={"error": "invalid_payload", "message": "sender.login missing"})
 
     db     = Database()
     scorer = ScoringEngine()
@@ -170,14 +173,14 @@ def _handle_pull_request(payload: dict):
         "pull_request persisted: user=%s repo=%s contrib_id=%s points=%s",
         username, repo_name, contrib_id, points,
     )
-    return jsonify({
+    return JSONResponse(status_code=200, content={
         "status":      "ok",
         "event":       "pull_request",
         "action":      action,
         "persisted":   True,
         "contrib_id":  contrib_id,
         "username":    username,
-    }), 200
+    })
 
 
 def _handle_issue(payload: dict):
@@ -194,12 +197,12 @@ def _handle_issue(payload: dict):
 
     if action != "closed":
         logger.info("issues event ignored: action=%s", action)
-        return jsonify({"status": "ok", "event": "issues", "action": action, "persisted": False}), 200
+        return JSONResponse(status_code=200, content={"status": "ok", "event": "issues", "action": action, "persisted": False})
 
     sender   = payload.get("sender", {})
     username = sender.get("login", "")
     if not username:
-        return jsonify({"error": "invalid_payload", "message": "sender.login missing"}), 400
+        return JSONResponse(status_code=400, content={"error": "invalid_payload", "message": "sender.login missing"})
 
     db     = Database()
     scorer = ScoringEngine()
@@ -233,12 +236,11 @@ def _handle_issue(payload: dict):
         "issue persisted: user=%s issue_id=%s contrib_id=%s points=%s",
         username, github_id, contrib_id, points,
     )
-    return jsonify({
+    return JSONResponse(status_code=200, content={
         "status":      "ok",
         "event":       "issues",
         "action":      action,
         "persisted":   True,
         "contrib_id":  contrib_id,
         "username":    username,
-    }), 200
-
+    })

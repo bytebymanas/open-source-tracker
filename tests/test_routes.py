@@ -13,6 +13,7 @@ from unittest.mock import patch, MagicMock
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src.main import app
+from fastapi.testclient import TestClient
 
 
 # ---------------------------------------------------------------------------
@@ -22,8 +23,8 @@ from src.main import app
 @pytest.fixture
 def client():
     """Flask test client with testing mode enabled."""
-    app.config["TESTING"] = True
-    with app.test_client() as c:
+    # app.config["TESTING"] = True
+    with TestClient(app) as c:
         yield c
 
 
@@ -92,7 +93,7 @@ class TestHealthEndpoint:
         assert client.get("/api/health").status_code == 200
 
     def test_returns_status_ok(self, client):
-        data = client.get("/api/health").get_json()
+        data = client.get("/api/health").json()
         assert data["status"] == "ok"
 
 
@@ -125,7 +126,7 @@ class TestUserEndpoint:
         mock_gh.get_user.return_value = MOCK_GITHUB_USER
         mock_gh.get_merged_pull_requests.return_value = MOCK_PRS
         mock_gh.get_user_issues.return_value = MOCK_ISSUES
-        data = client.get("/api/user/bytebymanas").get_json()
+        data = client.get("/api/user/bytebymanas").json()
         assert data["username"] == "bytebymanas"
 
     @patch("src.api.routes.github")
@@ -133,7 +134,7 @@ class TestUserEndpoint:
         mock_gh.get_user.return_value = MOCK_GITHUB_USER
         mock_gh.get_merged_pull_requests.return_value = MOCK_PRS
         mock_gh.get_user_issues.return_value = MOCK_ISSUES
-        data = client.get("/api/user/bytebymanas").get_json()
+        data = client.get("/api/user/bytebymanas").json()
         assert "score" in data
         assert "total" in data["score"]
 
@@ -143,7 +144,7 @@ class TestUserEndpoint:
         mock_gh.get_user.return_value = MOCK_GITHUB_USER
         mock_gh.get_merged_pull_requests.return_value = MOCK_PRS
         mock_gh.get_user_issues.return_value = MOCK_ISSUES
-        data = client.get("/api/user/bytebymanas").get_json()
+        data = client.get("/api/user/bytebymanas").json()
         assert data["score"]["total"] == 13
 
     @patch("src.api.routes.github")
@@ -155,7 +156,7 @@ class TestUserEndpoint:
     @patch("src.api.routes.github")
     def test_404_response_contains_error_key(self, mock_gh, client):
         mock_gh.get_user.return_value = None
-        data = client.get("/api/user/nonexistent_user_xyz").get_json()
+        data = client.get("/api/user/nonexistent_user_xyz").json()
         assert "error" in data
 
 
@@ -169,12 +170,12 @@ class TestLeaderboardEndpoint:
         assert client.get("/api/leaderboard").status_code == 200
 
     def test_returns_leaderboard_list(self, client):
-        data = client.get("/api/leaderboard").get_json()
+        data = client.get("/api/leaderboard").json()
         assert "leaderboard" in data
         assert isinstance(data["leaderboard"], list)
 
     def test_accepts_period_param(self, client):
-        data = client.get("/api/leaderboard?period=this_month").get_json()
+        data = client.get("/api/leaderboard?period=this_month").json()
         assert data.get("period") == "this_month"
 
     def test_accepts_limit_param(self, client):
@@ -194,25 +195,25 @@ class TestLeaderboardEndpoint:
     def test_department_filter_in_response(self, mock_db, client):
         """Response body should echo back the department filter that was applied."""
         mock_db.get_leaderboard.return_value = []
-        data = client.get("/api/leaderboard?department=EE").get_json()
+        data = client.get("/api/leaderboard?department=EE").json()
         assert data.get("department") == "EE"
 
     @patch("src.api.routes.db")
     def test_no_department_filter_echoes_none(self, mock_db, client):
         """When no department is given, response department field should be null."""
         mock_db.get_leaderboard.return_value = []
-        data = client.get("/api/leaderboard").get_json()
+        data = client.get("/api/leaderboard").json()
         assert data.get("department") is None
 
     def test_invalid_period_returns_400(self, client):
         res = client.get("/api/leaderboard?period=last_year")
         assert res.status_code == 400
-        assert res.get_json()["error"] == "invalid_param"
+        assert res.json()["error"] == "invalid_param"
 
     def test_invalid_limit_returns_400(self, client):
         res = client.get("/api/leaderboard?limit=abc")
         assert res.status_code == 400
-        assert res.get_json()["error"] == "invalid_param"
+        assert res.json()["error"] == "invalid_param"
 
 
 # ---------------------------------------------------------------------------
@@ -234,7 +235,7 @@ class TestContributionsEndpoint:
         mock_gh.get_user.return_value = MOCK_GITHUB_USER
         mock_gh.get_merged_pull_requests.return_value = MOCK_PRS
         mock_gh.get_user_issues.return_value = MOCK_ISSUES
-        data = client.get("/api/user/bytebymanas/contributions").get_json()
+        data = client.get("/api/user/bytebymanas/contributions").json()
         assert "username" in data
         assert "total" in data
         assert "contributions" in data
@@ -244,7 +245,7 @@ class TestContributionsEndpoint:
         mock_gh.get_user.return_value = MOCK_GITHUB_USER
         mock_gh.get_merged_pull_requests.return_value = MOCK_PRS
         mock_gh.get_user_issues.return_value = MOCK_ISSUES
-        data = client.get("/api/user/bytebymanas/contributions").get_json()
+        data = client.get("/api/user/bytebymanas/contributions").json()
         assert isinstance(data["contributions"], list)
 
     @patch("src.api.routes.github")
@@ -252,7 +253,7 @@ class TestContributionsEndpoint:
         mock_gh.get_user.return_value = MOCK_GITHUB_USER
         mock_gh.get_merged_pull_requests.return_value = MOCK_PRS
         mock_gh.get_user_issues.return_value = MOCK_ISSUES
-        data = client.get("/api/user/bytebymanas/contributions").get_json()
+        data = client.get("/api/user/bytebymanas/contributions").json()
         for item in data["contributions"]:
             assert "points" in item
 
@@ -261,7 +262,7 @@ class TestContributionsEndpoint:
         mock_gh.get_user.return_value = MOCK_GITHUB_USER
         mock_gh.get_merged_pull_requests.return_value = MOCK_PRS
         mock_gh.get_user_issues.return_value = []
-        data = client.get("/api/user/bytebymanas/contributions").get_json()
+        data = client.get("/api/user/bytebymanas/contributions").json()
         pr_items = [c for c in data["contributions"] if c["type"] == "pull_request"]
         assert all(item["points"] == 10 for item in pr_items)
 
@@ -270,7 +271,7 @@ class TestContributionsEndpoint:
         mock_gh.get_user.return_value = MOCK_GITHUB_USER
         mock_gh.get_merged_pull_requests.return_value = []
         mock_gh.get_user_issues.return_value = MOCK_ISSUES
-        data = client.get("/api/user/bytebymanas/contributions").get_json()
+        data = client.get("/api/user/bytebymanas/contributions").json()
         issue_items = [c for c in data["contributions"] if c["type"] == "issue"]
         assert all(item["points"] == 3 for item in issue_items)
 
@@ -285,7 +286,7 @@ class TestContributionsEndpoint:
         mock_gh.get_user.return_value = MOCK_GITHUB_USER
         mock_gh.get_merged_pull_requests.return_value = MOCK_PRS
         mock_gh.get_user_issues.return_value = MOCK_ISSUES
-        data = client.get("/api/user/bytebymanas/contributions").get_json()
+        data = client.get("/api/user/bytebymanas/contributions").json()
         assert data["total"] == len(data["contributions"])
 
     @patch("src.api.routes.db")
@@ -297,7 +298,7 @@ class TestContributionsEndpoint:
         mock_gh.get_user_issues.return_value = MOCK_ISSUES
         mock_db.upsert_user.return_value = 1
         mock_db.upsert_contribution.side_effect = [10, 20]
-        data = client.get("/api/user/bytebymanas/contributions").get_json()
+        data = client.get("/api/user/bytebymanas/contributions").json()
         for item in data["contributions"]:
             assert "id" in item
             assert isinstance(item["id"], int)
@@ -311,7 +312,7 @@ class TestContributionsEndpoint:
         mock_gh.get_user_issues.return_value = []
         mock_db.upsert_user.return_value = 1
         mock_db.upsert_contribution.return_value = 42
-        data = client.get("/api/user/bytebymanas/contributions").get_json()
+        data = client.get("/api/user/bytebymanas/contributions").json()
         pr_items = [c for c in data["contributions"] if c["type"] == "pull_request"]
         assert all(item["id"] > 0 for item in pr_items)
 
@@ -333,7 +334,7 @@ class TestReposEndpoint:
     def test_response_has_required_keys(self, mock_gh, client):
         mock_gh.get_user.return_value = MOCK_GITHUB_USER
         mock_gh.get_user_repos.return_value = MOCK_REPOS
-        data = client.get("/api/user/bytebymanas/repos").get_json()
+        data = client.get("/api/user/bytebymanas/repos").json()
         assert "username" in data
         assert "total" in data
         assert "repos" in data
@@ -342,14 +343,14 @@ class TestReposEndpoint:
     def test_repos_is_list(self, mock_gh, client):
         mock_gh.get_user.return_value = MOCK_GITHUB_USER
         mock_gh.get_user_repos.return_value = MOCK_REPOS
-        data = client.get("/api/user/bytebymanas/repos").get_json()
+        data = client.get("/api/user/bytebymanas/repos").json()
         assert isinstance(data["repos"], list)
 
     @patch("src.api.routes.github")
     def test_each_repo_has_expected_fields(self, mock_gh, client):
         mock_gh.get_user.return_value = MOCK_GITHUB_USER
         mock_gh.get_user_repos.return_value = MOCK_REPOS
-        data = client.get("/api/user/bytebymanas/repos").get_json()
+        data = client.get("/api/user/bytebymanas/repos").json()
         for repo in data["repos"]:
             assert "name" in repo
             assert "url" in repo
@@ -366,7 +367,7 @@ class TestReposEndpoint:
         ]
         mock_gh.get_user.return_value = MOCK_GITHUB_USER
         mock_gh.get_user_repos.return_value = repos
-        data = client.get("/api/user/bytebymanas/repos").get_json()
+        data = client.get("/api/user/bytebymanas/repos").json()
         assert data["repos"][0]["name"] == "high-stars"
 
 
@@ -392,7 +393,7 @@ class TestRateLimitEndpoint:
     @patch("src.api.routes.github")
     def test_response_has_github_rate_limit_key(self, mock_gh, client):
         mock_gh.get_rate_limit.return_value = {"remaining": 55, "limit": 60}
-        data = client.get("/api/ratelimit").get_json()
+        data = client.get("/api/ratelimit").json()
         assert "github_rate_limit" in data
 
 # ---------------------------------------------------------------------------
@@ -408,7 +409,7 @@ class TestMentorAnnotationsEndpoint:
         ]
         res = client.get("/api/contributions/1/annotations")
         assert res.status_code == 200
-        data = res.get_json()
+        data = res.json()
         assert "annotations" in data
         assert len(data["annotations"]) == 1
         assert data["annotations"][0]["mentor_username"] == "test_mentor"
@@ -423,13 +424,13 @@ class TestMentorAnnotationsEndpoint:
         }
         res = client.post("/api/contributions/100/annotations", json=payload)
         assert res.status_code == 201
-        assert res.get_json()["annotation_id"] == 1
+        assert res.json()["annotation_id"] == 1
 
     def test_add_annotation_missing_username(self, client):
         payload = {"note": "missing mentor name"}
         res = client.post("/api/contributions/100/annotations", json=payload)
         assert res.status_code == 400
-        assert res.get_json()["error"] == "invalid_payload"
+        assert res.json()["error"] == "invalid_payload"
 
 
 class TestDepartmentsEndpoint:
@@ -446,7 +447,7 @@ class TestDepartmentsEndpoint:
     def test_response_has_departments_key(self, mock_db, client):
         """Response body must contain a 'departments' list."""
         mock_db.get_departments.return_value = ["CS", "EE"]
-        data = client.get("/api/departments").get_json()
+        data = client.get("/api/departments").json()
         assert "departments" in data
         assert isinstance(data["departments"], list)
 
@@ -454,7 +455,7 @@ class TestDepartmentsEndpoint:
     def test_returns_known_departments(self, mock_db, client):
         """Department values from the DB should appear in the response."""
         mock_db.get_departments.return_value = ["Math", "Physics"]
-        data = client.get("/api/departments").get_json()
+        data = client.get("/api/departments").json()
         assert "Math" in data["departments"]
         assert "Physics" in data["departments"]
 
@@ -462,7 +463,7 @@ class TestDepartmentsEndpoint:
     def test_empty_departments_returns_empty_list(self, mock_db, client):
         """When no departments exist, response should be an empty list."""
         mock_db.get_departments.return_value = []
-        data = client.get("/api/departments").get_json()
+        data = client.get("/api/departments").json()
         assert data["departments"] == []
 
 
@@ -481,14 +482,14 @@ class TestExportEndpoint:
         """CSV export should return text/csv content type."""
         mock_db.get_leaderboard.return_value = []
         res = client.get("/api/leaderboard/export?format=csv")
-        assert "text/csv" in res.content_type
+        assert "text/csv" in res.headers.get("content-type", "")
 
     @patch("src.api.routes.db")
     def test_csv_export_has_header_row(self, mock_db, client):
         """CSV response should contain expected column headers."""
         mock_db.get_leaderboard.return_value = []
         res = client.get("/api/leaderboard/export?format=csv")
-        text = res.data.decode("utf-8")
+        text = res.content.decode("utf-8")
         assert "rank" in text
         assert "username" in text
         assert "total_score" in text
@@ -508,7 +509,7 @@ class TestExportEndpoint:
             }
         ]
         res = client.get("/api/leaderboard/export?format=csv")
-        text = res.data.decode("utf-8")
+        text = res.content.decode("utf-8")
         assert "user_a" in text
         assert "30" in text
 
@@ -542,24 +543,24 @@ class TestExportEndpoint:
         mock_db.get_leaderboard.return_value = []
         res = client.get("/api/leaderboard/export?format=json")
         import json
-        body = json.loads(res.data.decode("utf-8"))
+        body = json.loads(res.content.decode("utf-8"))
         assert "leaderboard" in body
 
     def test_export_invalid_format(self, client):
         """Unsupported format should return 400."""
         res = client.get("/api/leaderboard/export?format=xml")
         assert res.status_code == 400
-        assert res.get_json()["error"] == "invalid_param"
+        assert res.json()["error"] == "invalid_param"
 
     def test_export_invalid_period(self, client):
         """Invalid period should return 400."""
         res = client.get("/api/leaderboard/export?period=last_year")
         assert res.status_code == 400
-        assert res.get_json()["error"] == "invalid_param"
+        assert res.json()["error"] == "invalid_param"
 
     def test_export_invalid_limit(self, client):
         """Non-integer limit should return 400."""
         res = client.get("/api/leaderboard/export?limit=abc")
         assert res.status_code == 400
-        assert res.get_json()["error"] == "invalid_param"
+        assert res.json()["error"] == "invalid_param"
 

@@ -12,7 +12,13 @@ All responses are JSON. Errors follow the format:
 import csv
 import io
 import json as _json
-from flask import Blueprint, jsonify, request, Response
+from fastapi import APIRouter, Body, Request, Response
+from fastapi.responses import JSONResponse
+
+
+from pydantic import BaseModel
+from typing import List, Optional, Dict, Any
+import json as _json
 from src.api.github_api import GitHubAPI, GitHubAPIError
 from src.models.database import Database
 from src.utils.scoring import ScoringEngine
@@ -21,7 +27,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-api = Blueprint("api", __name__, url_prefix="/api")
+router = APIRouter()
 
 github = GitHubAPI()
 db = Database()
@@ -33,7 +39,7 @@ scorer = ScoringEngine()
 # Health
 # ------------------------------------------------------------------
 
-@api.route("/health", methods=["GET"])
+@router.get("/health")
 def health():
     """
     Server health check endpoint.
@@ -41,14 +47,14 @@ def health():
     Returns:
         JSON: {"status": "ok", "message": "Server is running"}
     """
-    return jsonify({"status": "ok", "message": "Server is running"}), 200
+    return JSONResponse(status_code=200, content={"status": "ok", "message": "Server is running"})
 
 
 # ------------------------------------------------------------------
 # User
 # ------------------------------------------------------------------
 
-@api.route("/user/<username>", methods=["GET"])
+@router.get("/user/{username}")
 def get_user(username):
     """
     Fetch contribution data and computed score for a GitHub user.
@@ -67,23 +73,23 @@ def get_user(username):
     cached = default_cache.get(cache_key)
     if cached:
         logger.info("Cache hit for user: %s", username)
-        return jsonify(cached), 200
+        return JSONResponse(status_code=200, content=cached)
 
     # Fetch user profile from GitHub
     try:
         profile = github.get_user(username)
     except GitHubAPIError as e:
-        return jsonify({"error": "github_api_error", "message": str(e)}), 503
+        return JSONResponse(status_code=503, content={"error": "github_api_error", "message": str(e)})
 
     if profile is None:
-        return jsonify({"error": "not_found", "message": f"GitHub user '{username}' not found."}), 404
+        return JSONResponse(status_code=404, content={"error": "not_found", "message": f"GitHub user '{username}' not found."})
 
     # Fetch merged PRs and closed issues
     try:
         prs = github.get_merged_pull_requests(username)
         issues = github.get_user_issues(username, state="closed")
     except GitHubAPIError as e:
-        return jsonify({"error": "github_api_error", "message": str(e)}), 503
+        return JSONResponse(status_code=503, content={"error": "github_api_error", "message": str(e)})
 
     # Build contribution list for the scoring engine
     contributions = []
@@ -139,14 +145,14 @@ def get_user(username):
     }
 
     default_cache.set(cache_key, response)
-    return jsonify(response), 200
+    return JSONResponse(status_code=200, content=response)
 
 
 # ------------------------------------------------------------------
 # Leaderboard
 # ------------------------------------------------------------------
 
-@api.route("/departments", methods=["GET"])
+@router.get("/departments")
 def get_departments():
     """
     Return the sorted list of distinct department names across active users.
@@ -158,11 +164,11 @@ def get_departments():
         JSON: {"departments": ["CS", "EE", ...]}
     """
     depts = db.get_departments()
-    return jsonify({"departments": depts}), 200
+    return JSONResponse(status_code=200, content={"departments": depts})
 
 
-@api.route("/leaderboard", methods=["GET"])
-def get_leaderboard():
+@router.get("/leaderboard")
+def get_leaderboard(request: Request):
     """
     Return the ranked leaderboard of all tracked users.
 
@@ -174,30 +180,30 @@ def get_leaderboard():
     Returns:
         JSON: Ranked list of users with scores
     """
-    period = request.args.get("period", "all_time")
+    period = request.query_params.get("period", "all_time")
     valid_periods = {"all_time", "this_month", "this_week"}
     if period not in valid_periods:
-        return jsonify({
+        return JSONResponse(content={
             "error": "invalid_param",
             "message": f"period must be one of: {', '.join(sorted(valid_periods))}",
-        }), 400
+        }, status_code=400)
 
     try:
-        limit = int(request.args.get("limit", 50))
+        limit = int(request.query_params.get("limit", 50))
         if limit < 1 or limit > 200:
             raise ValueError
     except (ValueError, TypeError):
-        return jsonify({
+        return JSONResponse(content={
             "error": "invalid_param",
             "message": "limit must be an integer between 1 and 200",
-        }), 400
+        }, status_code=400)
 
-    department = request.args.get("department", "").strip() or None
+    department = request.query_params.get("department", "").strip() or None
 
     cache_key = f"leaderboard:{period}:{limit}:{department or ''}"
     cached = default_cache.get(cache_key)
     if cached:
-        return jsonify(cached), 200
+        return JSONResponse(status_code=200, content=cached)
 
     board = db.get_leaderboard(period=period, limit=limit, department=department)
     ranked = []
@@ -215,7 +221,7 @@ def get_leaderboard():
 
     response = {"period": period, "department": department, "leaderboard": ranked}
     default_cache.set(cache_key, response)
-    return jsonify(response), 200
+    return JSONResponse(status_code=200, content=response)
 
 
 
@@ -223,7 +229,7 @@ def get_leaderboard():
 # Rate limit status
 # ------------------------------------------------------------------
 
-@api.route("/ratelimit", methods=["GET"])
+@router.get("/ratelimit")
 def rate_limit():
     """
     Return the current GitHub API rate limit status.
@@ -233,16 +239,16 @@ def rate_limit():
     """
     try:
         data = github.get_rate_limit()
-        return jsonify({"github_rate_limit": data}), 200
+        return JSONResponse(status_code=200, content={"github_rate_limit": data})
     except GitHubAPIError as e:
-        return jsonify({"error": "github_api_error", "message": str(e)}), 503
+        return JSONResponse(status_code=503, content={"error": "github_api_error", "message": str(e)})
 
 
 # ------------------------------------------------------------------
 # User contributions breakdown
 # ------------------------------------------------------------------
 
-@api.route("/user/<username>/contributions", methods=["GET"])
+@router.get("/user/{username}/contributions")
 def get_user_contributions(username):
     """
     Return a detailed list of contributions for a GitHub user with
@@ -260,23 +266,23 @@ def get_user_contributions(username):
     cache_key = f"contributions:{username}"
     cached = default_cache.get(cache_key)
     if cached:
-        return jsonify(cached), 200
+        return JSONResponse(status_code=200, content=cached)
 
     # Check user exists
     try:
         profile = github.get_user(username)
     except GitHubAPIError as e:
-        return jsonify({"error": "github_api_error", "message": str(e)}), 503
+        return JSONResponse(status_code=503, content={"error": "github_api_error", "message": str(e)})
 
     if profile is None:
-        return jsonify({"error": "not_found", "message": f"GitHub user '{username}' not found."}), 404
+        return JSONResponse(status_code=404, content={"error": "not_found", "message": f"GitHub user '{username}' not found."})
 
     # Fetch PRs and issues
     try:
         prs    = github.get_merged_pull_requests(username)
         issues = github.get_user_issues(username, state="closed")
     except GitHubAPIError as e:
-        return jsonify({"error": "github_api_error", "message": str(e)}), 503
+        return JSONResponse(status_code=503, content={"error": "github_api_error", "message": str(e)})
 
     # Ensure user exists in the DB so contributions can be linked
     user_id = db.upsert_user(
@@ -344,14 +350,14 @@ def get_user_contributions(username):
         "contributions": contributions,
     }
     default_cache.set(cache_key, response)
-    return jsonify(response), 200
+    return JSONResponse(status_code=200, content=response)
 
 
 # ------------------------------------------------------------------
 # User repositories
 # ------------------------------------------------------------------
 
-@api.route("/user/<username>/repos", methods=["GET"])
+@router.get("/user/{username}/repos")
 def get_user_repos(username):
     """
     Return a list of public repositories for a GitHub user.
@@ -365,20 +371,20 @@ def get_user_repos(username):
     cache_key = f"repos:{username}"
     cached = default_cache.get(cache_key)
     if cached:
-        return jsonify(cached), 200
+        return JSONResponse(status_code=200, content=cached)
 
     try:
         profile = github.get_user(username)
     except GitHubAPIError as e:
-        return jsonify({"error": "github_api_error", "message": str(e)}), 503
+        return JSONResponse(status_code=503, content={"error": "github_api_error", "message": str(e)})
 
     if profile is None:
-        return jsonify({"error": "not_found", "message": f"GitHub user '{username}' not found."}), 404
+        return JSONResponse(status_code=404, content={"error": "not_found", "message": f"GitHub user '{username}' not found."})
 
     try:
         raw_repos = github.get_user_repos(username)
     except GitHubAPIError as e:
-        return jsonify({"error": "github_api_error", "message": str(e)}), 503
+        return JSONResponse(status_code=503, content={"error": "github_api_error", "message": str(e)})
 
     repos = [
         {
@@ -399,29 +405,29 @@ def get_user_repos(username):
 
     response = {"username": username, "total": len(repos), "repos": repos}
     default_cache.set(cache_key, response)
-    return jsonify(response), 200
+    return JSONResponse(status_code=200, content=response)
 
 # ------------------------------------------------------------------
 # Mentor Annotations
 # ------------------------------------------------------------------
 
-@api.route("/contributions/<int:contribution_id>/annotations", methods=["GET"])
+@router.get("/contributions/{contribution_id}/annotations")
 def get_annotations(contribution_id):
     """
     Get all mentor annotations for a specific contribution.
     """
     annotations = db.get_annotations_for_contribution(contribution_id)
-    return jsonify({"contribution_id": contribution_id, "annotations": annotations}), 200
+    return JSONResponse(status_code=200, content={"contribution_id": contribution_id, "annotations": annotations})
 
-@api.route("/contributions/<int:contribution_id>/annotations", methods=["POST"])
-def add_annotation(contribution_id):
+@router.post("/contributions/{contribution_id}/annotations")
+def add_annotation(contribution_id: int, body: dict = Body(default={})):
     """
     Add a mentor annotation to a specific contribution.
     Requires JSON payload: { "mentor_username": str, "note": str (optional), "verified": int (0 or 1), "score_override": int (optional) }
     """
-    data = request.get_json()
+    data = body
     if not data or "mentor_username" not in data:
-        return jsonify({"error": "invalid_payload", "message": "mentor_username is required"}), 400
+        return JSONResponse(status_code=400, content={"error": "invalid_payload", "message": "mentor_username is required"})
     
     mentor_username = data["mentor_username"]
     note = data.get("note")
@@ -432,7 +438,7 @@ def add_annotation(contribution_id):
         if score_override is not None:
             score_override = int(score_override)
     except (ValueError, TypeError):
-        return jsonify({"error": "invalid_payload", "message": "verified and score_override must be integers"}), 400
+        return JSONResponse(status_code=400, content={"error": "invalid_payload", "message": "verified and score_override must be integers"})
 
     # Optional: We could verify if the contribution_id actually exists in the DB first.
     # For now we'll let it fail at DB constraint level if it doesn't.
@@ -445,17 +451,17 @@ def add_annotation(contribution_id):
             score_override=score_override
         )
     except Exception as e:
-        return jsonify({"error": "db_error", "message": str(e)}), 500
+        return JSONResponse(status_code=500, content={"error": "db_error", "message": str(e)})
         
-    return jsonify({"success": True, "annotation_id": annotation_id}), 201
+    return JSONResponse(status_code=201, content={"success": True, "annotation_id": annotation_id})
 
 
 # ------------------------------------------------------------------
 # Export
 # ------------------------------------------------------------------
 
-@api.route("/leaderboard/export", methods=["GET"])
-def export_leaderboard():
+@router.get("/leaderboard/export")
+def export_leaderboard(request: Request):
     """
     Export the leaderboard as a downloadable CSV or JSON file.
 
@@ -467,32 +473,32 @@ def export_leaderboard():
     Returns:
         File download: Leaderboard data in the requested format
     """
-    period = request.args.get("period", "all_time")
+    period = request.query_params.get("period", "all_time")
     valid_periods = {"all_time", "this_month", "this_week"}
     if period not in valid_periods:
-        return jsonify({
+        return JSONResponse(content={
             "error": "invalid_param",
             "message": f"period must be one of: {', '.join(sorted(valid_periods))}",
-        }), 400
+        }, status_code=400)
 
     try:
-        limit = int(request.args.get("limit", 200))
+        limit = int(request.query_params.get("limit", 200))
         if limit < 1 or limit > 1000:
             raise ValueError
     except (ValueError, TypeError):
-        return jsonify({
+        return JSONResponse(content={
             "error": "invalid_param",
             "message": "limit must be an integer between 1 and 1000",
-        }), 400
+        }, status_code=400)
 
-    fmt = request.args.get("format", "csv").lower()
+    fmt = request.query_params.get("format", "csv").lower()
     if fmt not in {"csv", "json"}:
-        return jsonify({
+        return JSONResponse(content={
             "error": "invalid_param",
             "message": "format must be 'csv' or 'json'",
-        }), 400
+        }, status_code=400)
 
-    department = request.args.get("department", "").strip() or None
+    department = request.query_params.get("department", "").strip() or None
     board = db.get_leaderboard(period=period, limit=limit, department=department)
     ranked = []
     for i, entry in enumerate(board, start=1):
@@ -515,8 +521,8 @@ def export_leaderboard():
             indent=2
         )
         return Response(
-            payload,
-            mimetype="application/json",
+            content=payload,
+            media_type="application/json",
             headers={
                 "Content-Disposition": f"attachment; filename=leaderboard-{filename_period}.json"
             },
@@ -532,8 +538,8 @@ def export_leaderboard():
     csv_content = buf.getvalue()
 
     return Response(
-        csv_content,
-        mimetype="text/csv",
+        content=csv_content,
+        media_type="text/csv",
         headers={
             "Content-Disposition": f"attachment; filename=leaderboard-{filename_period}.csv"
         },
@@ -545,7 +551,7 @@ def export_leaderboard():
 # Student Roster Routes
 # =============================================================================
 
-@api.route("/students", methods=["GET"])
+@router.get("/students")
 def list_students():
     """
     GET /api/students
@@ -553,14 +559,14 @@ def list_students():
     """
     try:
         students = db.get_all_students()
-        return jsonify({"total": len(students), "students": students})
+        return JSONResponse(content={"total": len(students), "students": students})
     except Exception as exc:
         logger.exception("list_students error")
-        return jsonify({"error": "db_error", "message": str(exc)}), 500
+        return JSONResponse(status_code=500, content={"error": "db_error", "message": str(exc)})
 
 
-@api.route("/students/import", methods=["POST"])
-def import_students():
+@router.post("/students/import")
+def import_students(body: dict = Body(default={})):
     """
     POST /api/students/import
     Body: {"usernames": ["user1", "user2", ...]}
@@ -568,16 +574,16 @@ def import_students():
     Fetch and persist multiple GitHub users in parallel.
     Returns a per-username status report.
     """
-    body = request.get_json(silent=True) or {}
+    
     usernames = body.get("usernames", [])
     if not usernames or not isinstance(usernames, list):
-        return jsonify({"error": "invalid_payload",
-                        "message": "usernames must be a non-empty list"}), 400
+        return JSONResponse(content={"error": "invalid_payload",
+                        "message": "usernames must be a non-empty list"}, status_code=400)
 
     usernames = [u.strip() for u in usernames if isinstance(u, str) and u.strip()]
     if not usernames:
-        return jsonify({"error": "invalid_payload",
-                        "message": "No valid usernames provided"}), 400
+        return JSONResponse(content={"error": "invalid_payload",
+                        "message": "No valid usernames provided"}, status_code=400)
 
     import concurrent.futures
 
@@ -613,66 +619,66 @@ def import_students():
 
     ok    = [r for r in results if r["status"] == "ok"]
     errs  = [r for r in results if r["status"] != "ok"]
-    return jsonify({
+    return JSONResponse(content={
         "imported": len(ok),
         "failed":   len(errs),
         "results":  results,
     })
 
 
-@api.route("/students/<username>", methods=["PATCH"])
-def update_student(username):
+@router.patch("/students/{username}")
+def update_student(username: str, body: dict = Body(default={})):
     """
-    PATCH /api/students/<username>
+    PATCH /api/students/{username}
     Body: {"department": "CSE", "university": "Chandigarh University"}
     Update department and/or university for a tracked student.
     """
-    body = request.get_json(silent=True) or {}
+    
     department = body.get("department")
     university = body.get("university")
     if department is None and university is None:
-        return jsonify({"error": "invalid_payload",
-                        "message": "Provide at least one of: department, university"}), 400
+        return JSONResponse(content={"error": "invalid_payload",
+                        "message": "Provide at least one of: department, university"}, status_code=400)
     updated = db.update_student_meta(username, department=department, university=university)
     if not updated:
-        return jsonify({"error": "not_found",
-                        "message": f"Student '{username}' not found"}), 404
-    return jsonify({"status": "ok", "username": username,
+        return JSONResponse(content={"error": "not_found",
+                        "message": f"Student '{username}' not found"}, status_code=404)
+    return JSONResponse(content={"status": "ok", "username": username,
                     "department": department, "university": university})
 
 
-@api.route("/students/<username>", methods=["DELETE"])
+@router.delete("/students/{username}")
 def delete_student(username):
     """
-    DELETE /api/students/<username>
+    DELETE /api/students/{username}
     Remove a student and all their data from the tracker.
     """
     deleted = db.delete_student(username)
     if not deleted:
-        return jsonify({"error": "not_found",
-                        "message": f"Student '{username}' not found"}), 404
-    return jsonify({"status": "ok", "username": username, "deleted": True})
+        return JSONResponse(content={"error": "not_found",
+                        "message": f"Student '{username}' not found"}, status_code=404)
+    return JSONResponse(content={"status": "ok", "username": username, "deleted": True})
 
 
 # =============================================================================
 # Mentor Dashboard Routes
 # =============================================================================
 
-@api.route("/annotations", methods=["GET"])
-def list_annotations():
+@router.get("/annotations")
+def list_annotations(request: Request):
     """
     GET /api/annotations
     Query params: mentor, verified (0|1), student
     Return all mentor annotations with contribution and student context.
     """
-    mentor  = request.args.get("mentor")
-    student = request.args.get("student")
-    verified_raw = request.args.get("verified")
+    mentor  = request.query_params.get("mentor")
+    student = request.query_params.get("student")
+    verified_raw = request.query_params.get("verified")
     verified = None
     if verified_raw is not None:
         if verified_raw not in ("0", "1"):
-            return jsonify({"error": "invalid_param",
-                            "message": "verified must be 0 or 1"}), 400
+            return JSONResponse(content={"error": "invalid_param",
+                            "message": "verified must be 0 or 1"}, status_code=400)
         verified = int(verified_raw)
     try:
         rows = db.get_all_annotations(
@@ -680,45 +686,45 @@ def list_annotations():
             verified=verified,
             student_username=student,
         )
-        return jsonify({"total": len(rows), "annotations": rows})
+        return JSONResponse(content={"total": len(rows), "annotations": rows})
     except Exception as exc:
         logger.exception("list_annotations error")
-        return jsonify({"error": "db_error", "message": str(exc)}), 500
+        return JSONResponse(status_code=500, content={"error": "db_error", "message": str(exc)})
 
 
-@api.route("/annotations/<int:annotation_id>", methods=["PATCH"])
-def update_annotation(annotation_id):
+@router.patch("/annotations/{annotation_id}")
+def update_annotation(annotation_id: int, body: dict = Body(default={})):
     """
-    PATCH /api/annotations/<id>
+    PATCH /api/annotations/{id}
     Body: {"note": "...", "verified": 1, "score_override": 8}
     Partially update a mentor annotation.
     """
-    body = request.get_json(silent=True) or {}
+    
     note           = body.get("note")
     verified       = body.get("verified")
     score_override = body.get("score_override")
     if note is None and verified is None and score_override is None:
-        return jsonify({"error": "invalid_payload",
-                        "message": "Provide at least one field to update"}), 400
+        return JSONResponse(content={"error": "invalid_payload",
+                        "message": "Provide at least one field to update"}, status_code=400)
     updated = db.update_annotation(annotation_id, note=note,
                                    verified=verified, score_override=score_override)
     if not updated:
-        return jsonify({"error": "not_found",
-                        "message": f"Annotation {annotation_id} not found"}), 404
-    return jsonify({"status": "ok", "annotation_id": annotation_id})
+        return JSONResponse(content={"error": "not_found",
+                        "message": f"Annotation {annotation_id} not found"}, status_code=404)
+    return JSONResponse(content={"status": "ok", "annotation_id": annotation_id})
 
 
-@api.route("/annotations/<int:annotation_id>", methods=["DELETE"])
+@router.delete("/annotations/{annotation_id}")
 def delete_annotation(annotation_id):
     """
-    DELETE /api/annotations/<id>
+    DELETE /api/annotations/{id}
     Remove a mentor annotation.
     """
     deleted = db.delete_annotation(annotation_id)
     if not deleted:
-        return jsonify({"error": "not_found",
-                        "message": f"Annotation {annotation_id} not found"}), 404
-    return jsonify({"status": "ok", "annotation_id": annotation_id, "deleted": True})
+        return JSONResponse(content={"error": "not_found",
+                        "message": f"Annotation {annotation_id} not found"}, status_code=404)
+    return JSONResponse(content={"status": "ok", "annotation_id": annotation_id, "deleted": True})
 
 
 # =============================================================================
@@ -735,20 +741,20 @@ _SCORING_WEIGHTS = {
 }
 
 
-@api.route("/settings/weights", methods=["GET"])
+@router.get("/settings/weights")
 def get_weights():
     """GET /api/settings/weights — Return current scoring weights."""
-    return jsonify({"weights": dict(_SCORING_WEIGHTS)})
+    return JSONResponse(content={"weights": dict(_SCORING_WEIGHTS)})
 
 
-@api.route("/settings/weights", methods=["POST"])
-def update_weights():
+@router.post("/settings/weights")
+def update_weights(body: dict = Body(default={})):
     """
     POST /api/settings/weights
     Body: {"pr_points": 12, "issue_points": 4, ...}
     Update one or more scoring weights.
     """
-    body = request.get_json(silent=True) or {}
+    
     valid_keys = set(_SCORING_WEIGHTS.keys())
     updated = {}
     errors  = {}
@@ -763,12 +769,12 @@ def update_weights():
         updated[key] = val
 
     if not body:
-        return jsonify({"error": "invalid_payload", "message": "Provide at least one weight field"}), 400
+        return JSONResponse(status_code=400, content={"error": "invalid_payload", "message": "Provide at least one weight field"})
 
     if errors and not updated:
-        return jsonify({"error": "invalid_payload", "fields": errors}), 400
+        return JSONResponse(status_code=400, content={"error": "invalid_payload", "fields": errors})
 
-    return jsonify({
+    return JSONResponse(content={
         "status":  "ok",
         "updated": updated,
         "weights": dict(_SCORING_WEIGHTS),

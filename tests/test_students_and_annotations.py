@@ -19,6 +19,7 @@ from unittest.mock import patch, MagicMock
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src.main import app
+from fastapi.testclient import TestClient
 
 
 # ---------------------------------------------------------------------------
@@ -27,8 +28,8 @@ from src.main import app
 
 @pytest.fixture
 def client():
-    app.config["TESTING"] = True
-    with app.test_client() as c:
+    # app.config["TESTING"] = True
+    with TestClient(app) as c:
         yield c
 
 
@@ -70,7 +71,7 @@ class TestListStudents:
         mock_db.get_all_students.return_value = MOCK_STUDENTS
         res = client.get("/api/students")
         assert res.status_code == 200
-        data = res.get_json()
+        data = res.json()
         assert data["total"] == 2
         assert len(data["students"]) == 2
 
@@ -79,13 +80,13 @@ class TestListStudents:
         mock_db.get_all_students.return_value = []
         res = client.get("/api/students")
         assert res.status_code == 200
-        assert res.get_json()["total"] == 0
+        assert res.json()["total"] == 0
 
     @patch("src.api.routes.db")
     def test_response_contains_score_fields(self, mock_db, client):
         mock_db.get_all_students.return_value = MOCK_STUDENTS
         res = client.get("/api/students")
-        student = res.get_json()["students"][0]
+        student = res.json()["students"][0]
         assert "total_score" in student
         assert "pr_count" in student
         assert "department" in student
@@ -114,20 +115,20 @@ class TestImportStudents:
         mock_db.upsert_user.return_value = 1
         res = client.post("/api/students/import",
                           json={"usernames": ["alice"]},
-                          content_type="application/json")
+                          headers={"Content-Type": "application/json"})
         assert res.status_code == 200
-        data = res.get_json()
+        data = res.json()
         assert data["imported"] == 1
         assert data["failed"] == 0
 
     def test_missing_usernames_returns_400(self, client):
         res = client.post("/api/students/import", json={},
-                          content_type="application/json")
+                          headers={"Content-Type": "application/json"})
         assert res.status_code == 400
 
     def test_empty_list_returns_400(self, client):
         res = client.post("/api/students/import", json={"usernames": []},
-                          content_type="application/json")
+                          headers={"Content-Type": "application/json"})
         assert res.status_code == 400
 
     @patch("src.api.routes.db")
@@ -138,9 +139,9 @@ class TestImportStudents:
         mock_gh.get_user.side_effect = GitHubAPIError("not found")
         res = client.post("/api/students/import",
                           json={"usernames": ["nonexistent_xyz_999"]},
-                          content_type="application/json")
+                          headers={"Content-Type": "application/json"})
         assert res.status_code == 200
-        data = res.get_json()
+        data = res.json()
         assert data["failed"] == 1
         assert data["results"][0]["status"] == "error"
 
@@ -154,7 +155,7 @@ class TestImportStudents:
         mock_db.upsert_user.return_value = 1
         res = client.post("/api/students/import",
                           json={"usernames": ["  alice  "]},
-                          content_type="application/json")
+                          headers={"Content-Type": "application/json"})
         assert res.status_code == 200
         # Verify the username passed to get_user was stripped
         mock_gh.get_user.assert_called_with("alice")
@@ -171,21 +172,21 @@ class TestUpdateStudent:
         mock_db.update_student_meta.return_value = True
         res = client.patch("/api/students/alice",
                            json={"department": "CSE"},
-                           content_type="application/json")
+                           headers={"Content-Type": "application/json"})
         assert res.status_code == 200
-        assert res.get_json()["status"] == "ok"
+        assert res.json()["status"] == "ok"
 
     @patch("src.api.routes.db")
     def test_update_nonexistent_student_returns_404(self, mock_db, client):
         mock_db.update_student_meta.return_value = False
         res = client.patch("/api/students/ghost",
                            json={"department": "ECE"},
-                           content_type="application/json")
+                           headers={"Content-Type": "application/json"})
         assert res.status_code == 404
 
     def test_no_fields_returns_400(self, client):
         res = client.patch("/api/students/alice", json={},
-                           content_type="application/json")
+                           headers={"Content-Type": "application/json"})
         assert res.status_code == 400
 
     @patch("src.api.routes.db")
@@ -193,7 +194,7 @@ class TestUpdateStudent:
         mock_db.update_student_meta.return_value = True
         res = client.patch("/api/students/alice",
                            json={"department": "CSE", "university": "CU"},
-                           content_type="application/json")
+                           headers={"Content-Type": "application/json"})
         assert res.status_code == 200
         mock_db.update_student_meta.assert_called_once_with(
             "alice", department="CSE", university="CU"
@@ -211,20 +212,20 @@ class TestDeleteStudent:
         mock_db.delete_student.return_value = True
         res = client.delete("/api/students/alice")
         assert res.status_code == 200
-        assert res.get_json()["deleted"] is True
+        assert res.json()["deleted"] is True
 
     @patch("src.api.routes.db")
     def test_delete_nonexistent_returns_404(self, mock_db, client):
         mock_db.delete_student.return_value = False
         res = client.delete("/api/students/ghost")
         assert res.status_code == 404
-        assert res.get_json()["error"] == "not_found"
+        assert res.json()["error"] == "not_found"
 
     @patch("src.api.routes.db")
     def test_delete_returns_username_in_response(self, mock_db, client):
         mock_db.delete_student.return_value = True
         res = client.delete("/api/students/alice")
-        assert res.get_json()["username"] == "alice"
+        assert res.json()["username"] == "alice"
 
 
 # ---------------------------------------------------------------------------
@@ -238,7 +239,7 @@ class TestListAnnotations:
         mock_db.get_all_annotations.return_value = MOCK_ANNOTATIONS
         res = client.get("/api/annotations")
         assert res.status_code == 200
-        data = res.get_json()
+        data = res.json()
         assert data["total"] == 1
         assert data["annotations"][0]["mentor_username"] == "mentor1"
 
@@ -285,21 +286,21 @@ class TestUpdateAnnotation:
         mock_db.update_annotation.return_value = True
         res = client.patch("/api/annotations/1",
                            json={"verified": 1},
-                           content_type="application/json")
+                           headers={"Content-Type": "application/json"})
         assert res.status_code == 200
-        assert res.get_json()["annotation_id"] == 1
+        assert res.json()["annotation_id"] == 1
 
     @patch("src.api.routes.db")
     def test_update_nonexistent_returns_404(self, mock_db, client):
         mock_db.update_annotation.return_value = False
         res = client.patch("/api/annotations/999",
                            json={"verified": 0},
-                           content_type="application/json")
+                           headers={"Content-Type": "application/json"})
         assert res.status_code == 404
 
     def test_no_fields_returns_400(self, client):
         res = client.patch("/api/annotations/1", json={},
-                           content_type="application/json")
+                           headers={"Content-Type": "application/json"})
         assert res.status_code == 400
 
     @patch("src.api.routes.db")
@@ -307,7 +308,7 @@ class TestUpdateAnnotation:
         mock_db.update_annotation.return_value = True
         res = client.patch("/api/annotations/1",
                            json={"note": "updated note", "score_override": 8},
-                           content_type="application/json")
+                           headers={"Content-Type": "application/json"})
         assert res.status_code == 200
         mock_db.update_annotation.assert_called_once_with(
             1, note="updated note", verified=None, score_override=8
@@ -325,11 +326,11 @@ class TestDeleteAnnotation:
         mock_db.delete_annotation.return_value = True
         res = client.delete("/api/annotations/1")
         assert res.status_code == 200
-        assert res.get_json()["deleted"] is True
+        assert res.json()["deleted"] is True
 
     @patch("src.api.routes.db")
     def test_delete_nonexistent_returns_404(self, mock_db, client):
         mock_db.delete_annotation.return_value = False
         res = client.delete("/api/annotations/999")
         assert res.status_code == 404
-        assert res.get_json()["error"] == "not_found"
+        assert res.json()["error"] == "not_found"

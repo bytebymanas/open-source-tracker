@@ -2,506 +2,123 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Open Source Contribution Tracker — Leaderboard and contribution analytics for university students." />
-  <title>Open Source Contribution Tracker</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CuSOC — Open Source Contribution Tracker</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- Styles -->
+  <link rel="stylesheet" href="/css/variables.css" />
+  <link rel="stylesheet" href="/css/layout.css" />
+  <link rel="stylesheet" href="/css/components.css" />
+  <link rel="stylesheet" href="/css/pages.css" />
 </head>
 <body>
 
-  <!-- Navigation -->
-  <nav class="navbar" id="navbar">
-    <div class="nav-container">
-      <div class="nav-brand">
-        <span class="brand-mark"></span>
-        <span class="brand-name">OS Tracker</span>
-        <span class="brand-tag">CUSoC 2026</span>
+  <div class="app-container">
+    
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        CuSOC
       </div>
-      <div class="nav-links">
-        <a href="#leaderboard" class="nav-link active" id="nav-leaderboard">Leaderboard</a>
-        <a href="#profile"     class="nav-link" id="nav-profile">Profile</a>
-        <a href="#students"    class="nav-link" id="nav-students">Students</a>
-        <a href="#mentor"      class="nav-link" id="nav-mentor">Mentor</a>
-        <a href="#settings"    class="nav-link" id="nav-settings">Settings</a>
+      <nav class="sidebar-nav">
+        <a class="nav-item active" data-page="dashboard">Dashboard</a>
+        <a class="nav-item" data-page="repositories">Repositories</a>
+        <a class="nav-item" data-page="activity">Activity</a>
+        <a class="nav-item" data-page="goals">Goals</a>
+        <a class="nav-item" data-page="leaderboards">Leaderboards</a>
+        <a class="nav-item" data-page="mentors">Mentors</a>
+        <a class="nav-item" data-page="settings">Settings</a>
+      </nav>
+      <div class="sidebar-footer">
+        <a class="nav-item" data-page="profile">Profile</a>
       </div>
-      <div class="nav-status" id="api-status">
-        <span class="status-dot"></span>
-        <span class="status-text">Connecting...</span>
-      </div>
-    </div>
-  </nav>
+    </aside>
 
-  <!-- Main -->
-  <main class="main" id="main">
-
-    <!-- ======================== LEADERBOARD VIEW ======================== -->
-    <section class="view active" id="view-leaderboard">
-
-      <div class="section-header">
-        <div>
-          <h1 class="section-title">Contribution Leaderboard</h1>
-          <p class="section-subtitle">Ranked by total contribution score across all tracked repositories.</p>
+    <!-- Main Content -->
+    <main class="main-wrapper">
+      
+      <!-- Top Header -->
+      <header class="top-header">
+        <div class="header-left">
+          <span class="breadcrumb" id="global-breadcrumb">CuSOC / <span class="breadcrumb-active">Dashboard</span></span>
         </div>
-        <div class="header-controls">
-          <div class="filter-group" id="period-filter">
-            <button class="filter-btn active" data-period="all_time">All Time</button>
-            <button class="filter-btn" data-period="this_month">This Month</button>
-            <button class="filter-btn" data-period="this_week">This Week</button>
-          </div>
+        <div class="header-center">
+          <input type="text" class="global-search" placeholder="Search users, repos, PRs..." />
         </div>
-      </div>
-
-      <!-- Stats bar -->
-      <div class="stats-bar" id="stats-bar">
-        <div class="stat-card">
-          <span class="stat-value" id="stat-total-users">—</span>
-          <span class="stat-label">Contributors</span>
+        <div class="header-right">
+          <div class="avatar-small">MC</div>
         </div>
-        <div class="stat-card">
-          <span class="stat-value" id="stat-total-prs">—</span>
-          <span class="stat-label">Merged PRs</span>
+      </header>
+
+      <!-- Pages -->
+      
+      <!-- 1. Dashboard -->
+      <section id="page-dashboard" class="page-view active">
+        <h1 class="page-title">Dashboard</h1>
+        <div id="dashboard-content">
+          <!-- Populated by JS -->
         </div>
-        <div class="stat-card">
-          <span class="stat-value" id="stat-total-issues">—</span>
-          <span class="stat-label">Issues Closed</span>
-        </div>
-        <div class="stat-card">
-          <span class="stat-value" id="stat-top-score">—</span>
-          <span class="stat-label">Top Score</span>
-        </div>
-      </div>
+      </section>
 
-      <!-- Leaderboard chart -->
-      <div class="chart-panel" id="leaderboard-chart-panel">
-        <div class="chart-panel-header">
-          <span class="chart-panel-title">Top Contributors</span>
-          <span class="chart-panel-sub">Score comparison for top 10</span>
-        </div>
-        <div class="chart-wrap chart-wrap-bar">
-          <canvas id="leaderboard-chart"></canvas>
-        </div>
-      </div>
+      <!-- 2. Repositories -->
+      <section id="page-repositories" class="page-view">
+        <h1 class="page-title">Repositories</h1>
+        <div id="repositories-content"></div>
+      </section>
 
-      <!-- Leaderboard table -->
-      <div class="table-wrapper">
-        <div class="table-toolbar">
-          <span class="table-count" id="table-count">Loading...</span>
-          <div class="toolbar-right">
-            <div class="dept-filter-wrap">
-              <label class="dept-filter-label" for="dept-filter">Department</label>
-              <select id="dept-filter" class="dept-select" aria-label="Filter by department">
-                <option value="">All Departments</option>
-              </select>
-            </div>
-            <div class="search-box">
-              <svg class="search-icon" viewBox="0 0 20 20" fill="none">
-                <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.5"/>
-                <path d="M13 13l3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-              </svg>
-              <input
-                type="text"
-                id="leaderboard-search"
-                class="search-input"
-                placeholder="Filter by username..."
-                autocomplete="off"
-              />
-            </div>
-          </div>
-        </div>
+      <!-- 3. Activity -->
+      <section id="page-activity" class="page-view">
+        <h1 class="page-title">Activity Feed</h1>
+        <div id="activity-content"></div>
+      </section>
 
-        <!-- Active filter chips -->
-        <div class="active-filters" id="active-filters" style="display:none">
-          <span class="active-filters-label">Filtered by:</span>
-          <span class="filter-chip" id="dept-chip">
-            <span class="filter-chip-text" id="dept-chip-text"></span>
-            <button class="filter-chip-clear" id="dept-chip-clear" aria-label="Clear department filter">&times;</button>
-          </span>
-        </div>
+      <!-- 4. Goals -->
+      <section id="page-goals" class="page-view">
+        <h1 class="page-title">Goals</h1>
+        <div id="goals-content"></div>
+      </section>
 
-        <table class="data-table" id="leaderboard-table">
-          <thead>
-            <tr>
-              <th class="col-rank">Rank</th>
-              <th class="col-user">Contributor</th>
-              <th class="col-dept">Department</th>
-              <th class="col-score sortable active" data-sort="score">Score</th>
-              <th class="col-prs sortable" data-sort="prs">Merged PRs</th>
-              <th class="col-issues sortable" data-sort="issues">Issues</th>
-              <th class="col-reviews sortable" data-sort="reviews">Reviews</th>
-              <th class="col-action"></th>
-            </tr>
-          </thead>
-          <tbody id="leaderboard-body">
-            <!-- Populated by script.js -->
-            <tr class="skeleton-row"><td colspan="8"><div class="skeleton"></div></td></tr>
-            <tr class="skeleton-row"><td colspan="8"><div class="skeleton"></div></td></tr>
-            <tr class="skeleton-row"><td colspan="8"><div class="skeleton"></div></td></tr>
-            <tr class="skeleton-row"><td colspan="8"><div class="skeleton"></div></td></tr>
-          </tbody>
-        </table>
+      <!-- 5. Leaderboards -->
+      <section id="page-leaderboards" class="page-view">
+        <h1 class="page-title">Leaderboards</h1>
+        <div id="leaderboards-content"></div>
+      </section>
 
-        <div class="empty-state hidden" id="leaderboard-empty">
-          <div class="empty-icon">
-            <svg viewBox="0 0 48 48" fill="none">
-              <rect x="8" y="16" width="32" height="24" rx="2" stroke="currentColor" stroke-width="2"/>
-              <path d="M16 16V12a8 8 0 0116 0v4" stroke="currentColor" stroke-width="2"/>
-              <circle cx="24" cy="28" r="3" fill="currentColor"/>
-            </svg>
-          </div>
-          <p class="empty-title">No contributors yet</p>
-          <p class="empty-body">Go to the <strong>Students</strong> tab to import GitHub usernames and populate the leaderboard.</p>
-        </div>
-      </div>
+      <!-- 6. Mentors -->
+      <section id="page-mentors" class="page-view">
+        <h1 class="page-title">Mentors</h1>
+        <div id="mentors-content"></div>
+      </section>
 
-    </section>
+      <!-- 7. Settings -->
+      <section id="page-settings" class="page-view">
+        <h1 class="page-title">Settings</h1>
+        <div id="settings-content"></div>
+      </section>
 
-    <!-- ======================== PROFILE VIEW ======================== -->
-    <section class="view" id="view-profile">
+      <!-- 8. Profile -->
+      <section id="page-profile" class="page-view">
+        <h1 class="page-title">Profile</h1>
+        <div id="profile-content"></div>
+      </section>
 
-      <!-- Search -->
-      <div class="profile-search-wrap">
-        <div class="profile-search-box">
-          <label class="profile-search-label" for="profile-username-input">GitHub Username</label>
-          <div class="profile-search-row">
-            <input
-              type="text"
-              id="profile-username-input"
-              class="profile-search-input"
-              placeholder="e.g. bytebymanas"
-              autocomplete="off"
-              spellcheck="false"
-            />
-            <button class="btn-primary" id="profile-search-btn">
-              <svg viewBox="0 0 20 20" fill="none" class="btn-icon">
-                <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.5"/>
-                <path d="M13 13l3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-              </svg>
-              Fetch Profile
-            </button>
-          </div>
-        </div>
-      </div>
+    </main>
+  </div>
 
-      <!-- Profile card -->
-      <div class="profile-card hidden" id="profile-card">
-
-        <div class="profile-header">
-          <img class="profile-avatar" id="profile-avatar" src="" alt="Avatar" />
-          <div class="profile-meta">
-            <h2 class="profile-name" id="profile-name">—</h2>
-            <a class="profile-username" id="profile-username-link" href="#" target="_blank" rel="noopener">@username</a>
-            <span class="profile-repos" id="profile-repos">— public repos</span>
-          </div>
-          <div class="profile-score-badge">
-            <span class="score-badge-value" id="profile-total-score">0</span>
-            <span class="score-badge-label">Total Score</span>
-          </div>
-          <button class="btn-add-roster" id="btn-add-roster" title="Add to student roster">+ Add to Roster</button>
-        </div>
-
-        <!-- Score breakdown -->
-        <div class="score-breakdown">
-          <div class="score-item">
-            <span class="score-item-value" id="profile-prs">0</span>
-            <span class="score-item-label">Merged PRs</span>
-            <span class="score-item-pts">×10 pts</span>
-          </div>
-          <div class="score-item">
-            <span class="score-item-value" id="profile-issues">0</span>
-            <span class="score-item-label">Issues Closed</span>
-            <span class="score-item-pts">×3 pts</span>
-          </div>
-          <div class="score-item">
-            <span class="score-item-value" id="profile-reviews">0</span>
-            <span class="score-item-label">Code Reviews</span>
-            <span class="score-item-pts">×5 pts</span>
-          </div>
-        </div>
-
-        <!-- Charts -->
-        <div class="profile-charts">
-          <div class="chart-card">
-            <div class="chart-card-title">Contribution Breakdown</div>
-            <div class="chart-wrap chart-wrap-donut">
-              <canvas id="profile-donut-chart"></canvas>
-            </div>
-          </div>
-          <div class="chart-card">
-            <div class="chart-card-title">Activity Timeline</div>
-            <div class="chart-wrap chart-wrap-timeline">
-              <canvas id="profile-timeline-chart"></canvas>
-            </div>
-          </div>
-        </div>
-
-        <!-- Contributions breakdown table -->
-        <div class="profile-section">
-          <div class="profile-section-header">
-            <h3 class="profile-section-title">Contributions</h3>
-            <span class="profile-section-count" id="contrib-count">—</span>
-          </div>
-          <!-- Type filter -->
-          <div class="contrib-type-filter" id="contrib-type-filter">
-            <button class="filter-btn active" data-type="all">All</button>
-            <button class="filter-btn" data-type="pull_request">PRs only</button>
-            <button class="filter-btn" data-type="issue">Issues only</button>
-          </div>
-          <div class="contrib-loading hidden" id="contrib-loading">
-            <div class="spinner spinner-sm"></div>
-            <span>Loading contributions...</span>
-          </div>
-          <table class="data-table profile-table hidden" id="contrib-table">
-            <thead>
-              <tr>
-                <th>Type</th>
-                <th>Title</th>
-                <th>Repository</th>
-                <th>Points</th>
-                <th class="col-action"></th>
-              </tr>
-            </thead>
-            <tbody id="contrib-body"></tbody>
-          </table>
-          <div class="empty-state hidden" id="contrib-empty">
-            <p class="empty-body">No contributions found for this user.</p>
-          </div>
-        </div>
-
-        <!-- Repositories -->
-        <div class="profile-section">
-          <div class="profile-section-header">
-            <h3 class="profile-section-title">Repositories</h3>
-            <span class="profile-section-count" id="repos-count">—</span>
-          </div>
-          <div class="repos-loading hidden" id="repos-loading">
-            <div class="spinner spinner-sm"></div>
-            <span>Loading repositories...</span>
-          </div>
-          <div class="repos-grid hidden" id="repos-grid"></div>
-          <div class="empty-state hidden" id="repos-empty">
-            <p class="empty-body">No public repositories found.</p>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- Profile error -->
-      <div class="profile-error hidden" id="profile-error">
-        <p class="error-text" id="profile-error-msg">User not found.</p>
-      </div>
-
-      <!-- Profile loading -->
-      <div class="profile-loading hidden" id="profile-loading">
-        <div class="spinner"></div>
-        <p>Fetching from GitHub...</p>
-      </div>
-
-    </section>
-
-    <!-- ======================== STUDENTS VIEW ======================== -->
-    <section class="view" id="view-students">
-
-      <div class="section-header">
-        <div>
-          <h1 class="section-title">Student Roster</h1>
-          <p class="section-subtitle">Import GitHub usernames, set departments, and manage tracked students.</p>
-        </div>
-        <div class="header-controls">
-          <button class="btn-primary" id="btn-refresh-students">Refresh</button>
-        </div>
-      </div>
-
-      <!-- Import panel -->
-      <div class="import-panel">
-        <div class="import-panel-header">
-          <h3 class="import-panel-title">Bulk Import</h3>
-          <p class="import-panel-sub">Paste GitHub usernames, one per line. Each user will be fetched from GitHub and added to the roster.</p>
-        </div>
-        <textarea
-          id="import-usernames"
-          class="import-textarea"
-          placeholder="bytebymanas
-alice
-bob"
-          rows="5"
-        ></textarea>
-        <div class="import-actions">
-          <button class="btn-primary" id="btn-import">Import Students</button>
-          <span class="import-status" id="import-status"></span>
-        </div>
-        <div class="import-results hidden" id="import-results"></div>
-      </div>
-
-      <!-- Roster table -->
-      <div class="table-wrapper" style="margin-top: var(--space-5)">
-        <div class="table-toolbar">
-          <span class="table-count" id="students-count">Loading...</span>
-          <div class="toolbar-right">
-            <div class="search-box">
-              <svg class="search-icon" viewBox="0 0 20 20" fill="none">
-                <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.5"/>
-                <path d="M13 13l3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-              </svg>
-              <input type="text" id="students-search" class="search-input" placeholder="Filter by name..." autocomplete="off" />
-            </div>
-          </div>
-        </div>
-        <table class="data-table" id="students-table">
-          <thead>
-            <tr>
-              <th class="col-user">Student</th>
-              <th>Department</th>
-              <th>University</th>
-              <th class="col-score">Score</th>
-              <th class="col-prs">PRs</th>
-              <th>Last Synced</th>
-              <th class="col-action"></th>
-            </tr>
-          </thead>
-          <tbody id="students-body"></tbody>
-        </table>
-        <div class="empty-state hidden" id="students-empty">
-          <p class="empty-title">No students tracked</p>
-          <p class="empty-body">Use the import panel above to add GitHub usernames.</p>
-        </div>
-      </div>
-
-    </section>
-
-    <!-- ======================== MENTOR VIEW ======================== -->
-    <section class="view" id="view-mentor">
-
-      <div class="section-header">
-        <div>
-          <h1 class="section-title">Mentor Dashboard</h1>
-          <p class="section-subtitle">Review, verify, and manage all contribution annotations across all students.</p>
-        </div>
-        <div class="header-controls">
-          <button class="btn-primary" id="btn-refresh-mentor">Refresh</button>
-        </div>
-      </div>
-
-      <!-- Filter bar -->
-      <div class="mentor-filters">
-        <div class="mentor-filter-field">
-          <label class="annot-label" for="mentor-filter-student">Student</label>
-          <input type="text" id="mentor-filter-student" class="annot-input" placeholder="github username" autocomplete="off" />
-        </div>
-        <div class="mentor-filter-field">
-          <label class="annot-label" for="mentor-filter-mentor">Mentor</label>
-          <input type="text" id="mentor-filter-mentor" class="annot-input" placeholder="mentor username" autocomplete="off" />
-        </div>
-        <div class="mentor-filter-field">
-          <label class="annot-label" for="mentor-filter-verified">Status</label>
-          <select id="mentor-filter-verified" class="dept-select">
-            <option value="">All</option>
-            <option value="1">Verified</option>
-            <option value="0">Unverified</option>
-          </select>
-        </div>
-        <button class="btn-primary btn-sm" id="btn-mentor-filter">Apply</button>
-        <button class="btn-secondary btn-sm" id="btn-mentor-clear">Clear</button>
-      </div>
-
-      <!-- Annotations table -->
-      <div class="table-wrapper" style="margin-top: var(--space-4)">
-        <div class="table-toolbar">
-          <span class="table-count" id="mentor-count">Loading...</span>
-        </div>
-        <table class="data-table" id="mentor-table">
-          <thead>
-            <tr>
-              <th>Student</th>
-              <th>Contribution</th>
-              <th>Mentor</th>
-              <th>Note</th>
-              <th>Override</th>
-              <th>Status</th>
-              <th>Date</th>
-              <th class="col-action"></th>
-            </tr>
-          </thead>
-          <tbody id="mentor-body"></tbody>
-        </table>
-        <div class="empty-state hidden" id="mentor-empty">
-          <p class="empty-title">No annotations found</p>
-          <p class="empty-body">Annotations appear here after mentors annotate contributions in the Profile tab.</p>
-        </div>
-      </div>
-
-    </section>
-
-    <!-- ======================== SETTINGS VIEW ======================== -->
-    <section class="view" id="view-settings">
-
-      <div class="section-header">
-        <div>
-          <h1 class="section-title">Settings</h1>
-          <p class="section-subtitle">Configure scoring weights used to calculate contribution points.</p>
-        </div>
-      </div>
-
-      <div class="settings-panel">
-        <div class="settings-section-title">Scoring Weights</div>
-        <p class="settings-desc">Changes apply to new score calculations. Existing scores are recalculated on next profile sync.</p>
-
-        <div class="settings-grid">
-          <div class="settings-field">
-            <label class="settings-label" for="weight-pr">Merged PR Points</label>
-            <div class="settings-input-row">
-              <input type="number" id="weight-pr" class="settings-input" min="0" max="100" placeholder="10" />
-              <span class="settings-unit">pts each</span>
-            </div>
-          </div>
-          <div class="settings-field">
-            <label class="settings-label" for="weight-issue">Closed Issue Points</label>
-            <div class="settings-input-row">
-              <input type="number" id="weight-issue" class="settings-input" min="0" max="100" placeholder="3" />
-              <span class="settings-unit">pts each</span>
-            </div>
-          </div>
-          <div class="settings-field">
-            <label class="settings-label" for="weight-review">Code Review Points</label>
-            <div class="settings-input-row">
-              <input type="number" id="weight-review" class="settings-input" min="0" max="100" placeholder="5" />
-              <span class="settings-unit">pts each</span>
-            </div>
-          </div>
-          <div class="settings-field">
-            <label class="settings-label" for="weight-first">First Contribution Bonus</label>
-            <div class="settings-input-row">
-              <input type="number" id="weight-first" class="settings-input" min="0" max="100" placeholder="5" />
-              <span class="settings-unit">pts bonus</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="settings-actions">
-          <button class="btn-primary" id="btn-save-weights">Save Weights</button>
-          <button class="btn-secondary" id="btn-reset-weights">Reset to Defaults</button>
-          <span class="settings-feedback hidden" id="settings-feedback"></span>
-        </div>
-      </div>
-
-    </section>
-
-  </main>
-
-  <!-- Footer -->
-  <footer class="footer">
-    <div class="footer-inner">
-      <span>Open Source Contribution Tracker</span>
-      <span class="footer-sep">·</span>
-      <span>CUSoC 2026</span>
-      <span class="footer-sep">·</span>
-      <a href="https://github.com/bytebymanas/open-source-tracker" target="_blank" rel="noopener" class="footer-link">GitHub</a>
-    </div>
-  </footer>
-
-  <script src="script.js"></script>
+  <!-- Scripts -->
+  <script src="/js/api.js"></script>
+  <script src="/js/components/cards.js"></script>
+  <script src="/js/components/table.js"></script>
+  <script src="/js/pages/dashboard.js"></script>
+  <script src="/js/pages/leaderboard.js"></script>
+  <script src="/js/pages/profile.js"></script>
+  <script src="/js/pages/activity.js"></script>
+  <script src="/js/router.js"></script>
+  <script src="/js/app.js"></script>
 </body>
 </html>
