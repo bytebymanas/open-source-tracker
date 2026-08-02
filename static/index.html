@@ -1,124 +1,427 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>CuSOC — Open Source Contribution Tracker</title>
-  
-  <!-- Fonts -->
+  <title>CuSOC — Contributor Management Platform</title>
+  <meta name="description" content="Track, verify, analyze, and grow open-source contributors at your university or organization."/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  
-  <!-- Styles -->
-  <link rel="stylesheet" href="/css/variables.css" />
-  <link rel="stylesheet" href="/css/layout.css" />
-  <link rel="stylesheet" href="/css/components.css" />
-  <link rel="stylesheet" href="/css/pages.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/variables.css"/>
+  <link rel="stylesheet" href="/css/layout.css"/>
+  <link rel="stylesheet" href="/css/components.css"/>
+  <link rel="stylesheet" href="/css/pages.css"/>
 </head>
 <body>
+<div class="app-root">
 
-  <div class="app-container">
-    
-    <!-- Sidebar -->
-    <aside class="sidebar">
-      <div class="sidebar-header">
-        CuSOC
+  <!-- ═══════════════ SIDEBAR ═══════════════ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon">
+        <!-- Home/hub icon like reference -->
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
       </div>
-      <nav class="sidebar-nav">
-        <a class="nav-item active" data-page="dashboard">Dashboard</a>
-        <a class="nav-item" data-page="repositories">Repositories</a>
-        <a class="nav-item" data-page="activity">Activity</a>
-        <a class="nav-item" data-page="goals">Goals</a>
-        <a class="nav-item" data-page="leaderboards">Leaderboards</a>
-        <a class="nav-item" data-page="mentors">Mentors</a>
-        <a class="nav-item" data-page="settings">Settings</a>
-      </nav>
-      <div class="sidebar-footer">
-        <a class="nav-item" data-page="profile">Profile</a>
+      <span class="sidebar-logo-wordmark">CuSOC</span>
+    </div>
+
+    <nav class="sidebar-nav" role="navigation" aria-label="Main navigation">
+
+      <button class="nav-item active" data-page="dashboard" id="nav-dashboard" aria-label="Dashboard">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+        <span>Dashboard</span>
+      </button>
+
+      <div class="sidebar-section-label">Contributors</div>
+
+      <button class="nav-item" data-page="leaderboards" id="nav-leaderboards" aria-label="Leaderboards">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 13h4v7H4zm6-7h4v14h-4zm6 4h4v10h-4z"/></svg>
+        <span>Leaderboards</span>
+      </button>
+
+      <button class="nav-item" data-page="contributors" id="nav-contributors" aria-label="Contributors">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+        <span>Contributors</span>
+      </button>
+
+      <button class="nav-item" data-page="activity" id="nav-activity" aria-label="Activity">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2.05v2.02c3.95.49 7 3.85 7 7.93 0 3.21-1.81 6-4.5 7.54L13 17v5h5l-1.22-1.22C19.91 19.07 22 15.76 22 12c0-5.18-3.95-9.45-9-9.95zM11 2.05C5.95 2.55 2 6.82 2 12c0 3.76 2.09 7.07 5.22 8.78L6 22h5V2.05zM11 13H8l4.5-8.5V11h3l-4.5 8.5V13z"/></svg>
+        <span>Activity</span>
+      </button>
+
+      <div class="sidebar-section-label">Reviews</div>
+
+      <button class="nav-item" data-page="reviews" id="nav-reviews" aria-label="Mentor Reviews">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 14v-2.47l6.88-6.88c.2-.2.51-.2.71 0l1.77 1.77c.2.2.2.51 0 .71L8.47 14H6zm12 0h-7.5l2-2H18v2z"/></svg>
+        <span>Mentor Reviews</span>
+      </button>
+
+      <button class="nav-item" data-page="goals" id="nav-goals" aria-label="Goals">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94.63 1.5 1.98 2.63 3.61 2.96V19H7v2h10v-2h-4v-3.1c1.63-.33 2.98-1.46 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z"/></svg>
+        <span>Goals</span>
+      </button>
+
+      <div class="sidebar-section-label">Platform</div>
+
+      <button class="nav-item" data-page="settings" id="nav-settings" aria-label="Settings">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+        <span>Settings</span>
+      </button>
+
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-user" id="nav-profile-link" data-page="profile" role="button" tabindex="0" aria-label="View profile">
+        <div class="sidebar-avatar-wrap" id="sidebar-avatar">CU</div>
+        <div class="sidebar-user-meta">
+          <div class="sidebar-user-name" id="sidebar-username">CuSOC Admin</div>
+          <div class="sidebar-user-role">Platform</div>
+        </div>
       </div>
-    </aside>
+    </div>
+  </aside>
 
-    <!-- Main Content -->
-    <main class="main-wrapper">
-      
-      <!-- Top Header -->
-      <header class="top-header">
-        <div class="header-left">
-          <span class="breadcrumb" id="global-breadcrumb">CuSOC / <span class="breadcrumb-active">Dashboard</span></span>
+  <!-- ═══════════════ MAIN AREA ═══════════════ -->
+  <div class="main-area">
+
+    <!-- Top Header -->
+    <header class="top-header" role="banner">
+      <div class="breadcrumb" aria-label="Breadcrumb">
+        <span>CuSOC</span>
+        <span class="breadcrumb-sep">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+        </span>
+        <span class="breadcrumb-current" id="header-page-title">Dashboard</span>
+      </div>
+
+      <div class="header-search" role="search">
+        <svg class="header-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input type="search" class="header-search-input" id="global-search"
+               placeholder="Search contributor, repo…"
+               aria-label="Global search"
+               autocomplete="off"/>
+      </div>
+
+      <div class="header-right">
+        <span class="header-welcome">Welcome, <strong id="header-username">Manas</strong></span>
+        <div class="header-avatar" id="header-avatar" data-page="profile" role="button" tabindex="0" aria-label="Your profile">CU</div>
+      </div>
+    </header>
+
+    <!-- Page area -->
+    <main class="page-area" role="main">
+
+      <!-- ──────── 1. DASHBOARD ──────── -->
+      <section id="page-dashboard" class="page-view active" aria-label="Dashboard">
+        <div class="page-header page-header-row">
+          <div>
+            <h1 class="page-title">Dashboard</h1>
+            <p class="page-subtitle">Platform overview and recent contributor activity</p>
+          </div>
         </div>
-        <div class="header-center">
-          <input type="text" class="global-search" placeholder="Search users, repos, PRs..." />
+        <div class="stats-grid" id="dashboard-stats">
+          <!-- Skeleton placeholders -->
+          <div class="stat-card"><div class="stat-label">Contributors</div><div class="skeleton" style="width:60px;margin-top:8px;"></div></div>
+          <div class="stat-card"><div class="stat-label">Merged PRs</div><div class="skeleton" style="width:50px;margin-top:8px;"></div></div>
+          <div class="stat-card"><div class="stat-label">Issues Closed</div><div class="skeleton" style="width:50px;margin-top:8px;"></div></div>
+          <div class="stat-card"><div class="stat-label">Avg Score</div><div class="skeleton" style="width:50px;margin-top:8px;"></div></div>
         </div>
-        <div class="header-right">
-          <div class="avatar-small">MC</div>
+        <div class="dashboard-grid">
+          <div class="card" id="card-top-contributors">
+            <div class="card-header">
+              <div><div class="card-title">Top Contributors</div></div>
+              <button class="btn btn-ghost btn-sm" data-page="leaderboards">View all →</button>
+            </div>
+            <div id="dashboard-top-list"><div class="card-body"><div class="skeleton-row"><div class="skeleton-circle"></div><div class="skeleton-text"><div class="skeleton" style="width:160px;margin-bottom:6px;"></div><div class="skeleton" style="width:100px;height:11px;"></div></div></div></div></div>
+          </div>
+          <div class="card" id="card-recent-activity">
+            <div class="card-header">
+              <div><div class="card-title">Recent Activity</div></div>
+            </div>
+            <div id="dashboard-activity" class="card-body" style="padding:0;"><div class="skeleton-row"><div class="skeleton-circle" style="width:8px;height:8px;border-radius:50%;margin-top:6px;"></div><div class="skeleton-text"><div class="skeleton" style="width:200px;"></div></div></div></div>
+          </div>
         </div>
-      </header>
+      </section>
 
-      <!-- Pages -->
-      
-      <!-- 1. Dashboard -->
-      <section id="page-dashboard" class="page-view active">
-        <h1 class="page-title">Dashboard</h1>
-        <div id="dashboard-content">
-          <!-- Populated by JS -->
+      <!-- ──────── 2. LEADERBOARDS ──────── -->
+      <section id="page-leaderboards" class="page-view" aria-label="Leaderboards">
+        <div class="page-header page-header-row">
+          <div>
+            <h1 class="page-title">Leaderboards</h1>
+            <p class="page-subtitle">Ranked by total contribution score</p>
+          </div>
+          <button class="btn btn-secondary btn-sm" id="lb-export-btn">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+            Export CSV
+          </button>
+        </div>
+        <div class="lb-controls">
+          <div class="tabs" style="margin-bottom:0;border-bottom:none;">
+            <button class="tab-btn active" data-period="all_time">All Time</button>
+            <button class="tab-btn" data-period="this_month">This Month</button>
+            <button class="tab-btn" data-period="this_week">This Week</button>
+          </div>
+          <select class="select" id="lb-dept" style="width:auto;min-width:160px;" aria-label="Filter by department">
+            <option value="">All Departments</option>
+          </select>
+          <div class="input-group" style="max-width:220px;margin-left:auto;">
+            <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input type="search" class="input" id="lb-search" placeholder="Search…" aria-label="Search leaderboard"/>
+          </div>
+        </div>
+        <div class="card">
+          <div class="table-wrap">
+            <table id="lb-table" aria-label="Leaderboard">
+              <thead>
+                <tr>
+                  <th style="width:52px;">#</th>
+                  <th>Contributor</th>
+                  <th>Department</th>
+                  <th class="sortable">Merged PRs</th>
+                  <th class="sortable">Issues</th>
+                  <th class="sortable">Score</th>
+                </tr>
+              </thead>
+              <tbody id="lb-tbody">
+                <tr><td colspan="6"><div class="empty-state" style="padding:32px;"><div class="skeleton" style="width:200px;"></div></div></td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
 
-      <!-- 2. Repositories -->
-      <section id="page-repositories" class="page-view">
-        <h1 class="page-title">Repositories</h1>
-        <div id="repositories-content"></div>
+      <!-- ──────── 3. CONTRIBUTORS ──────── -->
+      <section id="page-contributors" class="page-view" aria-label="Contributors">
+        <div class="page-header page-header-row">
+          <div>
+            <h1 class="page-title">Contributors</h1>
+            <p class="page-subtitle">All tracked GitHub contributors</p>
+          </div>
+          <button class="btn btn-primary btn-sm" id="open-add-modal">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+            Import Contributors
+          </button>
+        </div>
+        <div class="contributors-toolbar">
+          <div class="input-group contributors-search">
+            <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input type="search" class="input" id="contributors-search" placeholder="Filter by name or @username…" aria-label="Search contributors"/>
+          </div>
+          <select class="select" id="contributors-dept-filter" style="width:auto;min-width:160px;" aria-label="Filter by department">
+            <option value="">All Departments</option>
+          </select>
+        </div>
+        <div class="card">
+          <div class="table-wrap">
+            <table id="contributors-table" aria-label="Contributors list">
+              <thead>
+                <tr>
+                  <th>Contributor</th>
+                  <th>Department</th>
+                  <th>Merged PRs</th>
+                  <th>Issues</th>
+                  <th>Score</th>
+                  <th style="width:120px;"></th>
+                </tr>
+              </thead>
+              <tbody id="contributors-tbody">
+                <tr><td colspan="6"><div class="skeleton-row"><div class="skeleton-circle"></div><div class="skeleton-text"><div class="skeleton" style="width:160px;margin-bottom:6px;"></div><div class="skeleton" style="width:100px;height:11px;"></div></div></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </section>
 
-      <!-- 3. Activity -->
-      <section id="page-activity" class="page-view">
-        <h1 class="page-title">Activity Feed</h1>
-        <div id="activity-content"></div>
+      <!-- ──────── 4. ACTIVITY ──────── -->
+      <section id="page-activity" class="page-view" aria-label="Activity feed">
+        <div class="page-header page-header-row">
+          <div>
+            <h1 class="page-title">Activity Feed</h1>
+            <p class="page-subtitle">Contribution events across the platform</p>
+          </div>
+          <div class="flex gap-2">
+            <select class="select" id="activity-filter" style="width:auto;min-width:140px;" aria-label="Filter activity">
+              <option value="">All Types</option>
+              <option value="pull_request">Pull Requests</option>
+              <option value="issue">Issues</option>
+            </select>
+          </div>
+        </div>
+        <div id="activity-content">
+          <div class="skeleton-row"><div class="skeleton-circle" style="width:8px;height:8px;"></div><div class="skeleton-text"><div class="skeleton" style="width:280px;"></div></div></div>
+        </div>
       </section>
 
-      <!-- 4. Goals -->
-      <section id="page-goals" class="page-view">
-        <h1 class="page-title">Goals</h1>
-        <div id="goals-content"></div>
+      <!-- ──────── 5. PROFILE ──────── -->
+      <section id="page-profile" class="page-view" aria-label="Contributor profile">
+        <div id="profile-content">
+          <div class="empty-state">
+            <div class="empty-state-icon">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+            </div>
+            <h3>No contributor selected</h3>
+            <p>Click a contributor row in the leaderboard or contributors list to view their profile</p>
+          </div>
+        </div>
       </section>
 
-      <!-- 5. Leaderboards -->
-      <section id="page-leaderboards" class="page-view">
-        <h1 class="page-title">Leaderboards</h1>
-        <div id="leaderboards-content"></div>
+      <!-- ──────── 6. REVIEWS ──────── -->
+      <section id="page-reviews" class="page-view" aria-label="Mentor reviews">
+        <div class="page-header page-header-row">
+          <div>
+            <h1 class="page-title">Mentor Reviews</h1>
+            <p class="page-subtitle">Annotations, verifications, and score overrides</p>
+          </div>
+        </div>
+        <div class="flex gap-3 mb-6" style="flex-wrap:wrap;">
+          <select class="select" id="reviews-filter-verified" style="width:auto;min-width:160px;" aria-label="Filter by status">
+            <option value="">All Statuses</option>
+            <option value="1">Verified</option>
+            <option value="0">Pending</option>
+          </select>
+          <input type="search" class="input" id="reviews-filter-student" placeholder="Filter by student…" style="max-width:220px;" aria-label="Filter by student"/>
+        </div>
+        <div id="reviews-list" class="review-list">
+          <div class="card"><div class="skeleton-row"><div class="skeleton-text"><div class="skeleton" style="width:100%;"></div></div></div></div>
+        </div>
       </section>
 
-      <!-- 6. Mentors -->
-      <section id="page-mentors" class="page-view">
-        <h1 class="page-title">Mentors</h1>
-        <div id="mentors-content"></div>
+      <!-- ──────── 7. GOALS ──────── -->
+      <section id="page-goals" class="page-view" aria-label="Goals">
+        <div class="page-header">
+          <h1 class="page-title">Goals</h1>
+          <p class="page-subtitle">Platform-level contribution milestones</p>
+        </div>
+        <div id="goals-list" class="goals-list">
+          <div class="skeleton" style="height:80px;border-radius:12px;"></div>
+          <div class="skeleton" style="height:80px;border-radius:12px;margin-top:12px;"></div>
+        </div>
       </section>
 
-      <!-- 7. Settings -->
-      <section id="page-settings" class="page-view">
-        <h1 class="page-title">Settings</h1>
-        <div id="settings-content"></div>
-      </section>
-
-      <!-- 8. Profile -->
-      <section id="page-profile" class="page-view">
-        <h1 class="page-title">Profile</h1>
-        <div id="profile-content"></div>
+      <!-- ──────── 8. SETTINGS ──────── -->
+      <section id="page-settings" class="page-view" aria-label="Settings">
+        <div class="page-header">
+          <h1 class="page-title">Settings</h1>
+          <p class="page-subtitle">Scoring configuration and platform options</p>
+        </div>
+        <div class="settings-grid">
+          <div class="card">
+            <div class="card-header">
+              <div><div class="card-title">Scoring Weights</div><div class="card-subtitle">Points awarded per contribution type</div></div>
+              <button class="btn btn-primary btn-sm" id="save-weights-btn">Save Changes</button>
+            </div>
+            <div class="card-body" id="weights-body">
+              <div class="skeleton" style="height:200px;"></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Platform Status</div></div>
+            <div class="card-body">
+              <div class="settings-row">
+                <div><div class="settings-row-label">API Backend</div><div class="settings-row-desc">FastAPI + SQLite</div></div>
+                <span class="badge badge-success">Live</span>
+              </div>
+              <div class="settings-row">
+                <div><div class="settings-row-label">GitHub Rate Limit</div><div class="settings-row-desc" id="rate-limit-desc">Loading…</div></div>
+              </div>
+              <div class="settings-row">
+                <div><div class="settings-row-label">API Version</div><div class="settings-row-desc">v1.0</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
     </main>
-  </div>
+  </div><!-- /main-area -->
+</div><!-- /app-root -->
 
-  <!-- Scripts -->
-  <script src="/js/api.js"></script>
-  <script src="/js/components/cards.js"></script>
-  <script src="/js/components/table.js"></script>
-  <script src="/js/pages/dashboard.js"></script>
-  <script src="/js/pages/leaderboard.js"></script>
-  <script src="/js/pages/profile.js"></script>
-  <script src="/js/pages/activity.js"></script>
-  <script src="/js/router.js"></script>
-  <script src="/js/app.js"></script>
+<!-- ═══════ MODAL: Add Contributors ═══════ -->
+<div class="modal-overlay" id="modal-add" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="modal-add-title">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-add-title">Import Contributors</span>
+      <button class="modal-close" data-close-modal="modal-add" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label" for="add-usernames-input">GitHub Usernames</label>
+        <textarea class="textarea" id="add-usernames-input" rows="5"
+          placeholder="Enter one username per line or comma-separated&#10;&#10;e.g.&#10;torvalds&#10;gvanrossum&#10;dhh"></textarea>
+        <div class="form-hint">@-prefix is stripped automatically</div>
+      </div>
+      <div id="add-result"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" data-close-modal="modal-add">Cancel</button>
+      <button class="btn btn-primary" id="confirm-add-btn">Import</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ MODAL: Edit Contributor ═══════ -->
+<div class="modal-overlay" id="modal-edit" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="modal-edit-title">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-edit-title">Edit Contributor</span>
+      <button class="modal-close" data-close-modal="modal-edit" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-username"/>
+      <div class="form-group">
+        <label class="form-label" for="edit-dept">Department</label>
+        <input type="text" class="input" id="edit-dept" placeholder="e.g. Computer Science"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="edit-university">University</label>
+        <input type="text" class="input" id="edit-university" placeholder="e.g. Chandigarh University"/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" data-close-modal="modal-edit">Cancel</button>
+      <button class="btn btn-primary" id="confirm-edit-btn">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ MODAL: Confirm Delete ═══════ -->
+<div class="modal-overlay" id="modal-delete" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="modal-delete-title">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-delete-title">Remove Contributor</span>
+      <button class="modal-close" data-close-modal="modal-delete" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:var(--fs-sm);color:var(--t-secondary);">
+        Are you sure you want to remove <strong id="delete-username-label"></strong> from the tracker? This will delete all their score data.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" data-close-modal="modal-delete">Cancel</button>
+      <button class="btn btn-danger" id="confirm-delete-btn">Remove</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ TOAST CONTAINER ═══════ -->
+<div class="toast-container" id="toast-container" aria-live="polite" aria-atomic="false"></div>
+
+<!-- ═══════ SCRIPTS ═══════ -->
+<script src="/js/api.js"></script>
+<script src="/js/state.js"></script>
+<script src="/js/router.js"></script>
+<script src="/js/pages/dashboard.js"></script>
+<script src="/js/pages/leaderboard.js"></script>
+<script src="/js/pages/contributors.js"></script>
+<script src="/js/pages/profile.js"></script>
+<script src="/js/pages/activity.js"></script>
+<script src="/js/pages/reviews.js"></script>
+<script src="/js/pages/goals.js"></script>
+<script src="/js/pages/settings.js"></script>
+<script src="/js/app.js"></script>
+
 </body>
 </html>
