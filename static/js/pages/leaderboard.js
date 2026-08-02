@@ -1,70 +1,164 @@
-/**
- * Leaderboards Page
- */
+/* ============================================================
+   leaderboard.js — /js/pages/leaderboard.js
+   ============================================================ */
+let _lbData  = [];
+const _lb    = { period: 'all_time', dept: '', search: '' };
+let _lbListenersInit = false;
 
 async function renderLeaderboards() {
-  const container = document.getElementById('leaderboards-content');
-  
-  // Skeleton
-  container.innerHTML = `
-    <div class="card">
-      <div class="skeleton-text" style="width: 200px; margin-bottom: 24px;"></div>
-      ${Array(5).fill('<div class="skeleton-row" style="margin-bottom: 12px;"><div class="skeleton-box" style="height:40px;"></div></div>').join('')}
-    </div>
-  `;
+  // Populate department filter once
+  if (!State.get('departments').length) {
+    try {
+      const d     = await API.departments();
+      const depts = d.departments || [];
+      State.set('departments', depts);
+      ['lb-dept', 'contributors-dept-filter'].forEach(id => {
+        const sel = document.getElementById(id);
+        if (sel && depts.length) {
+          sel.innerHTML = `<option value="">All Departments</option>` +
+            depts.map(dep => `<option value="${escHtml(dep)}">${escHtml(dep)}</option>`).join('');
+        }
+      });
+    } catch (_) {}
+  }
+
+  if (!_lbListenersInit) {
+    _lbListenersInit = true;
+    _initLbListeners();
+  }
+
+  await _loadLeaderboard();
+}
+
+function _initLbListeners() {
+  // Period tabs
+  document.querySelectorAll('[data-period]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-period]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      _lb.period = btn.dataset.period;
+      _lb.search = '';
+      const searchEl = document.getElementById('lb-search');
+      if (searchEl) searchEl.value = '';
+      _loadLeaderboard();
+    });
+  });
+
+  // Department filter
+  document.getElementById('lb-dept')?.addEventListener('change', (e) => {
+    _lb.dept = e.target.value;
+    _renderLbTable();
+  });
+
+  // Search (debounced per spec)
+  const searchEl = document.getElementById('lb-search');
+  if (searchEl) {
+    searchEl.addEventListener('input', debounce(() => {
+      _lb.search = searchEl.value.toLowerCase().trim();
+      _renderLbTable();
+    }, 250));
+  }
+
+  // CSV export
+  document.getElementById('lb-export-btn')?.addEventListener('click', () => {
+    const url = `/api/leaderboard/export?period=${_lb.period}&format=csv` +
+                (_lb.dept ? '&department=' + encodeURIComponent(_lb.dept) : '');
+    window.open(url, '_blank');
+  });
+}
+
+async function _loadLeaderboard() {
+  const tbody = document.getElementById('lb-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = _skeletonTbodyRows(6, 6);
 
   try {
-    const data = await apiFetch("/api/leaderboard?period=all_time");
-    const users = data.leaderboard || [];
-
-    const headers = ['Rank', 'Contributor', 'PRs', 'Issues', 'Reviews', 'Score'];
-    
-    const rows = users.map((u, i) => {
-      const rankHtml = i < 3 
-        ? `<span style="display: inline-flex; width: 24px; height: 24px; align-items: center; justify-content: center; border-radius: 50%; background: ${i === 0 ? '#FEF08A' : i === 1 ? '#E5E7EB' : '#FED7AA'}; color: #000; font-weight: 600; font-size: 12px;">${i+1}</span>`
-        : `<span style="font-weight: 500; color: var(--text-muted); padding-left: 8px;">${i+1}</span>`;
-
-      const userHtml = `
-        <div style="display: flex; align-items: center; gap: 12px;">
-          <div class="avatar-small" style="font-size: 12px; font-weight:600; background: var(--color-light-gray); color: var(--text-secondary);">${(u.name || u.username).substring(0,2).toUpperCase()}</div>
-          <div>
-            <div style="font-weight: 500; font-size: 14px; color: var(--text-primary);">${u.name || u.username}</div>
-            <div style="font-size: 12px; color: var(--text-muted);">@${u.username}</div>
-          </div>
-        </div>
-      `;
-
-      return [
-        rankHtml,
-        userHtml,
-        u.score?.merged_prs || 0,
-        u.score?.issues_closed || 0,
-        u.score?.reviews || 0,
-        `<span style="font-weight: 600; color: var(--color-forest);">${u.score?.total || 0}</span>`
-      ];
-    });
-
-    const tableHtml = createTable(headers, rows);
-
-    container.innerHTML = `
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-        <div style="display: flex; gap: 8px;">
-           <button class="btn btn-secondary" style="background: var(--color-forest); color: white; border-color: var(--color-forest);">Global</button>
-           <button class="btn btn-secondary">Department</button>
-           <button class="btn btn-secondary">Freshers</button>
-        </div>
-        <select class="global-search" style="width: 150px;">
-          <option>All Time</option>
-          <option>This Month</option>
-          <option>This Week</option>
-        </select>
-      </div>
-      <div class="card">
-        ${tableHtml}
-      </div>
-    `;
-
+    const cacheKey = `lb-${_lb.period}`;
+    const data     = await State.cache(cacheKey, () => API.leaderboard(_lb.period, ''));
+    _lbData = data.leaderboard || [];
+    _renderLbTable();
   } catch (err) {
-    container.innerHTML = `<div class="card"><p style="color: var(--color-danger)">Failed to load leaderboards: ${err.message}</p></div>`;
+    tbody.innerHTML = `<tr><td colspan="6">${_errorHtml(err, '_loadLeaderboard()')}</td></tr>`;
   }
 }
+
+function _renderLbTable() {
+  const tbody = document.getElementById('lb-tbody');
+  if (!tbody) return;
+
+  const q    = _lb.search;
+  const dept = _lb.dept;
+
+  const filtered = _lbData.filter(u => {
+    const matchQ    = !q || (u.github_username||'').toLowerCase().includes(q) || (u.name||'').toLowerCase().includes(q);
+    const matchDept = !dept || (u.department||'') === dept;
+    return matchQ && matchDept;
+  });
+
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="6">
+      <div class="empty-state" style="padding:32px;">
+        <div class="empty-state-icon">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 13h4v7H4zm6-7h4v14h-4zm6 4h4v10h-4z"/></svg>
+        </div>
+        <h3>${q || dept ? 'No results found' : 'No contributors yet'}</h3>
+        <p>${q || dept ? 'Try adjusting your filters' : 'Import GitHub usernames to get started'}</p>
+      </div>
+    </td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map((u) => {
+    const realRank  = _lbData.indexOf(u) + 1;
+    const medal     = ['🥇', '🥈', '🥉'][realRank - 1] || realRank;
+    const rankClass = ['top-1', 'top-2', 'top-3'][realRank - 1] || '';
+    return `
+      <tr style="cursor:pointer;" data-profile="${escHtml(u.github_username)}">
+        <td><span class="rank-num ${rankClass}">${medal}</span></td>
+        <td>
+          <div class="user-cell">
+            <div class="avatar avatar-sm">${avatarInitials(u.name || u.github_username)}</div>
+            <div class="user-cell-info">
+              <div class="user-cell-name">${escHtml(u.name || u.github_username)}</div>
+              <div class="user-cell-sub">@${escHtml(u.github_username)}</div>
+            </div>
+          </div>
+        </td>
+        <td><span class="text-muted">${escHtml(u.department || '—')}</span></td>
+        <td>${u.merged_prs || 0}</td>
+        <td>${u.issues_closed || 0}</td>
+        <td><span class="score-display">${u.total_score || 0} pts</span></td>
+      </tr>`;
+  }).join('');
+
+  // Row click → profile
+  tbody.querySelectorAll('tr[data-profile]').forEach(row => {
+    row.addEventListener('click', () => {
+      State.set('profileUsername', row.dataset.profile);
+      Router.navigate('profile');
+    });
+  });
+}
+
+/* ---- Helpers shared with other page modules ---- */
+function _skeletonTbodyRows(rows, cols) {
+  return Array.from({ length: rows }, () =>
+    `<tr>${Array.from({ length: cols }, () =>
+      `<td><div class="skeleton" style="height:13px;"></div></td>`
+    ).join('')}</tr>`
+  ).join('');
+}
+
+function _errorHtml(err, retryCall) {
+  return `
+    <div class="error-state">
+      <div class="error-state-icon">⚠</div>
+      <h3>Something went wrong</h3>
+      <p>${escHtml(err.message || 'Unknown error')}</p>
+      <button class="btn btn-secondary btn-sm mt-4" onclick="${retryCall}">Retry</button>
+    </div>`;
+}
+
+/* re-export as module-level names used by other pages */
+function skeletonRows(rows, cols) { return _skeletonTbodyRows(rows, cols); }
+function errorState(err, fn)       { return _errorHtml(err, fn); }
