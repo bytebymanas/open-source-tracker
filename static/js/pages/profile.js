@@ -1,121 +1,178 @@
-/**
- * Profile Page
- */
+/* ============================================================
+   profile.js
+   ============================================================ */
+let _profileTab = 'contributions';
 
 async function renderProfile() {
   const container = document.getElementById('profile-content');
-  
-  // Basic search/select state if no user selected
+  const username  = State.get('profileUsername');
+
+  if (!username) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></div>
+        <h3>No contributor selected</h3>
+        <p>Click a contributor row in the Leaderboards or Contributors page</p>
+      </div>`;
+    return;
+  }
+
+  // Skeleton
   container.innerHTML = `
-    <div style="display: flex; gap: 12px; margin-bottom: 32px;">
-      <input type="text" id="profile-search-input" class="global-search" placeholder="Enter GitHub username..." style="max-width: 300px;" />
-      <button class="btn btn-primary" id="profile-search-btn">Search</button>
-    </div>
-    <div id="profile-details-container">
-      <div class="card" style="text-align: center; color: var(--text-muted); padding: 48px;">
-        Search for a user to view their profile.
+    <div class="profile-hero">
+      <div class="avatar avatar-xl skeleton"></div>
+      <div class="profile-meta">
+        <div class="skeleton" style="width:200px;height:20px;margin-bottom:8px;"></div>
+        <div class="skeleton" style="width:120px;height:13px;margin-bottom:16px;"></div>
+        <div class="flex gap-4">
+          ${[1,2,3].map(() => '<div class="skeleton" style="width:60px;height:32px;"></div>').join('')}
+        </div>
       </div>
-    </div>
-  `;
+    </div>`;
 
-  document.getElementById('profile-search-btn').addEventListener('click', async () => {
-    const username = document.getElementById('profile-search-input').value.trim();
-    if (!username) return;
+  try {
+    const [userResp, contribResp, repoResp] = await Promise.all([
+      State.cache(`user-${username}`, () => API.user(username), 120000).catch(() => null),
+      State.cache(`contribs-${username}`, () => API.contributions(username), 120000).catch(() => ({ contributions: [] })),
+      State.cache(`repos-${username}`, () => API.repos(username), 120000).catch(() => ({ repos: [] })),
+    ]);
 
-    const detailsContainer = document.getElementById('profile-details-container');
-    detailsContainer.innerHTML = `
-      <div class="card">
-        <div class="skeleton-box" style="height: 200px;"></div>
+    const user     = userResp || { login: username, name: username };
+    const contribs = contribResp.contributions || [];
+    const repos    = repoResp.repos || [];
+    const prs      = contribs.filter(c => c.type === 'pull_request');
+    const issues   = contribs.filter(c => c.type === 'issue');
+    const totalScore = contribs.reduce((s, c) => s + (c.points || 0), 0);
+
+    const avatarHtml = user.avatar_url
+      ? `<div class="avatar avatar-xl"><img src="${escHtml(user.avatar_url)}" alt="${escHtml(user.login)}" loading="lazy"/></div>`
+      : `<div class="avatar avatar-xl">${avatarInitials(user.name || user.login)}</div>`;
+
+    container.innerHTML = `
+      <div class="page-header page-header-row" style="margin-bottom:16px;">
+        <div>
+          <h1 class="page-title">${escHtml(user.name || user.login)}</h1>
+          <p class="page-subtitle">@${escHtml(user.login || username)}</p>
+        </div>
+        <a href="https://github.com/${escHtml(username)}" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">
+          ${Icons.ext} View on GitHub
+        </a>
       </div>
-    `;
 
-    try {
-      // Use existing endpoints: /api/students/<username>, /api/contributions/<username>
-      // First get basic profile/score from leaderboard since there's no single student GET yet,
-      // wait, the old API did have it via the leaderboard. 
-      // Actually we have: GET /api/leaderboard and we filter by username.
-      const lbData = await apiFetch("/api/leaderboard?period=all_time");
-      const user = lbData.leaderboard?.find(u => u.username === username);
-
-      if (!user) {
-         detailsContainer.innerHTML = `<div class="card" style="color: var(--color-danger)">User not found in system.</div>`;
-         return;
-      }
-
-      const contribs = await apiFetch(`/api/contributions/${username}`);
-
-      // Render LinkedIn-style header
-      const headerHtml = `
-        <div class="card" style="margin-bottom: 24px; display: flex; gap: 24px; align-items: flex-start;">
-          <div style="width: 120px; height: 120px; border-radius: 50%; background: var(--color-light-gray); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 600; color: var(--text-secondary);">
-            ${(user.name || user.username).substring(0,2).toUpperCase()}
-          </div>
-          <div style="flex: 1;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-              <div>
-                <h2 style="margin: 0; font-size: 24px;">${user.name || user.username}</h2>
-                <div style="color: var(--text-muted); font-size: 15px; margin-top: 4px;">@${user.username}</div>
-                <div style="color: var(--text-secondary); margin-top: 8px;">${user.department || 'No department set'}</div>
-              </div>
-              <div>
-                <div class="badge badge-success" style="font-size: 14px; padding: 6px 12px;">Rank: TBD</div>
-              </div>
+      <div class="profile-hero">
+        ${avatarHtml}
+        <div class="profile-meta">
+          <div class="profile-name">${escHtml(user.name || user.login)}</div>
+          <div class="profile-handle">@${escHtml(user.login || username)}</div>
+          <div class="profile-stats">
+            <div>
+              <div class="profile-stat-val text-accent">${totalScore}</div>
+              <div class="profile-stat-label">Total Score</div>
             </div>
-            
-            <div style="display: flex; gap: 32px; margin-top: 24px;">
-              <div><strong style="font-size: 18px;">${user.score?.total || 0}</strong> <span style="color: var(--text-muted); font-size: 13px;">XP</span></div>
-              <div><strong style="font-size: 18px;">${user.score?.merged_prs || 0}</strong> <span style="color: var(--text-muted); font-size: 13px;">PRs</span></div>
-              <div><strong style="font-size: 18px;">${user.score?.issues_closed || 0}</strong> <span style="color: var(--text-muted); font-size: 13px;">Issues</span></div>
-              <div><strong style="font-size: 18px;">${user.score?.reviews || 0}</strong> <span style="color: var(--text-muted); font-size: 13px;">Reviews</span></div>
+            <div>
+              <div class="profile-stat-val">${prs.length}</div>
+              <div class="profile-stat-label">Merged PRs</div>
+            </div>
+            <div>
+              <div class="profile-stat-val">${issues.length}</div>
+              <div class="profile-stat-label">Issues</div>
+            </div>
+            <div>
+              <div class="profile-stat-val">${repos.length}</div>
+              <div class="profile-stat-label">Repos</div>
             </div>
           </div>
         </div>
-      `;
+      </div>
 
-      // Render Heatmap (Mocked visual structure)
-      const heatmapHtml = `
-        <div class="card" style="margin-bottom: 24px;">
-          <h3 style="margin-top: 0; font-size: 16px; color: var(--text-secondary);">Contribution Calendar</h3>
-          <div style="display: flex; gap: 4px; overflow-x: auto; margin-top: 16px;">
-            ${Array(30).fill(0).map(() => `
-              <div style="display: flex; flex-direction: column; gap: 4px;">
-                ${Array(7).fill(0).map(() => {
-                  const intensity = Math.random();
-                  const color = intensity > 0.8 ? '#196127' : intensity > 0.5 ? '#239a3b' : intensity > 0.2 ? '#7bc96f' : '#ebedf0';
-                  return `<div style="width: 12px; height: 12px; background: ${color}; border-radius: 2px;"></div>`;
-                }).join('')}
-              </div>
-            `).join('')}
-          </div>
+      <div class="tabs" id="profile-tabs">
+        <button class="tab-btn ${_profileTab === 'contributions' ? 'active' : ''}" data-tab="contributions">Contributions (${contribs.length})</button>
+        <button class="tab-btn ${_profileTab === 'repos' ? 'active' : ''}" data-tab="repos">Repositories (${repos.length})</button>
+      </div>
+
+      <div id="profile-tab-content"></div>`;
+
+    _renderProfileTab(contribs, repos);
+
+    container.querySelectorAll('[data-tab]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        container.querySelectorAll('[data-tab]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        _profileTab = btn.dataset.tab;
+        _renderProfileTab(contribs, repos);
+      });
+    });
+
+  } catch (err) {
+    container.innerHTML = `<div class="card">${errorState(err, 'renderProfile()')}</div>`;
+  }
+}
+
+function _renderProfileTab(contribs, repos) {
+  const el = document.getElementById('profile-tab-content');
+  if (!el) return;
+
+  if (_profileTab === 'contributions') {
+    if (!contribs.length) {
+      el.innerHTML = `<div class="card">
+        <div class="empty-state">
+          <div class="empty-state-icon">${Icons.pr}</div>
+          <h3>No contributions found</h3>
+          <p>This contributor has no tracked contributions yet</p>
         </div>
-      `;
-
-      // Render timeline (Recent Contribs)
-      const timelineHtml = `
-        <div class="card">
-          <h3 style="margin-top: 0; font-size: 16px; color: var(--text-secondary);">Recent Activity</h3>
-          <div style="display: flex; flex-direction: column; gap: 16px; margin-top: 16px;">
-            ${(contribs.contributions || []).slice(0, 10).map(c => `
-              <div style="display: flex; gap: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--color-light-gray);">
-                <div class="badge" style="background: var(--color-light-gray); height: max-content;">${c.type}</div>
-                <div>
-                  <div style="font-weight: 500;"><a href="${c.url}" target="_blank" style="color: var(--color-forest);">${c.title}</a></div>
-                  <div style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">in ${c.repo} • ${new Date(c.merged_at || c.closed_at || c.submitted_at).toLocaleDateString()}</div>
-                </div>
-              </div>
-            `).join('') || '<p style="color: var(--text-muted);">No recent activity.</p>'}
-          </div>
-        </div>
-      `;
-
-      detailsContainer.innerHTML = `
-        ${headerHtml}
-        ${heatmapHtml}
-        ${timelineHtml}
-      `;
-
-    } catch (err) {
-      detailsContainer.innerHTML = `<div class="card" style="color: var(--color-danger)">Error: ${err.message}</div>`;
+      </div>`;
+      return;
     }
-  });
+
+    const rows = contribs.map(c => {
+      const isPR = c.type === 'pull_request';
+      return `
+        <div class="contrib-item">
+          <div class="contrib-icon ${isPR ? 'pr' : 'issue'}">${isPR ? Icons.pr : Icons.issue}</div>
+          <div class="contrib-body">
+            <div class="contrib-title">
+              ${c.url
+                ? `<a href="${escHtml(c.url)}" target="_blank" rel="noopener">${escHtml(c.title || 'Untitled')}</a>`
+                : escHtml(c.title || 'Untitled')}
+            </div>
+            <div class="contrib-meta">
+              ${c.repo ? escHtml(c.repo) + ' · ' : ''}
+              <span class="badge ${isPR ? 'badge-primary' : 'badge-info'}">${isPR ? 'PR' : 'Issue'}</span>
+            </div>
+          </div>
+          <div class="contrib-points">+${c.points || 0}</div>
+        </div>`;
+    }).join('');
+
+    el.innerHTML = `<div class="card"><div class="contrib-list">${rows}</div></div>`;
+  } else {
+    // Repos tab
+    if (!repos.length) {
+      el.innerHTML = `<div class="card">
+        <div class="empty-state">
+          <div class="empty-state-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-1V4c0-1.1-.9-2-2-2H3c-1.1 0-2 .9-2 2v13c0 1.1.9 2 2 2h1v1c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zM3 4h14v2H3V4zm17 16H6v-1h11c1.1 0 2-.9 2-2V8h1v12z"/></svg></div>
+          <h3>No public repositories</h3>
+        </div>
+      </div>`;
+      return;
+    }
+
+    const cards = repos.map(r => `
+      <div class="repo-card">
+        <div class="repo-card-name">
+          ${r.url
+            ? `<a href="${escHtml(r.url)}" target="_blank" rel="noopener">${escHtml(r.name)}</a>`
+            : escHtml(r.name)}
+          ${r.is_fork ? `<span class="badge badge-neutral" style="margin-left:6px;font-size:10px;">Fork</span>` : ''}
+        </div>
+        <div class="repo-card-desc">${escHtml(r.description || 'No description provided.')}</div>
+        <div class="repo-card-meta">
+          ${r.language ? `<span><span class="lang-dot"></span>${escHtml(r.language)}</span>` : ''}
+          <span>⭐ ${r.stars || 0}</span>
+          <span>🍴 ${r.forks || 0}</span>
+        </div>
+      </div>`).join('');
+
+    el.innerHTML = `<div class="repo-grid">${cards}</div>`;
+  }
 }
