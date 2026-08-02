@@ -1,54 +1,55 @@
-// Main Application Entry Point
-
+/* ============================================================
+   app.js — Bootstrap, route registration, global wiring
+   ============================================================ */
 document.addEventListener('DOMContentLoaded', () => {
-  
-  // Register routes
-  appRouter.addRoute('dashboard', renderDashboard);
-  appRouter.addRoute('repositories', renderRepositories);
-  appRouter.addRoute('activity', renderActivity);
-  appRouter.addRoute('goals', renderGoals);
-  appRouter.addRoute('leaderboards', renderLeaderboards);
-  appRouter.addRoute('mentors', renderMentors);
-  appRouter.addRoute('settings', renderSettings);
-  appRouter.addRoute('profile', renderProfile);
 
-  // Parse initial route from hash, or default to dashboard
-  const hash = window.location.hash.replace('#', '');
-  const initialPage = hash || 'dashboard';
-  
-  // Navigate to initial page
-  appRouter.navigate(initialPage, false);
+  /* ---- Register routes ---- */
+  Router.register('dashboard',    renderDashboard);
+  Router.register('leaderboards', renderLeaderboards);
+  Router.register('contributors', renderContributors);
+  Router.register('activity',     renderActivity);
+  Router.register('profile',      renderProfile);
+  Router.register('reviews',      renderReviews);
+  Router.register('goals',        renderGoals);
+  Router.register('settings',     renderSettings);
+
+  /* ---- Initial navigation from hash ---- */
+  const hash = location.hash.replace('#', '').trim();
+  Router.navigate(hash || 'dashboard', false);
+
+  /* ---- Global search (Enter → profile lookup) ---- */
+  const searchEl = document.getElementById('global-search');
+  searchEl?.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    const q = searchEl.value.trim().replace(/^@/, '');
+    if (!q) return;
+    searchEl.value = '';
+    State.set('profileUsername', q);
+    Router.navigate('profile');
+  });
+
+  /* ---- Contributors page "Import" button also opens modal ---- */
+
+  /* ---- Header avatar → profile ---- */
+  document.getElementById('header-avatar')?.addEventListener('click', () => {
+    Router.navigate('profile');
+  });
+
+  /* ---- Sidebar profile link ---- */
+  const sidebarProfileLink = document.getElementById('nav-profile-link');
+  if (sidebarProfileLink) {
+    sidebarProfileLink.addEventListener('click', () => Router.navigate('profile'));
+    sidebarProfileLink.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') Router.navigate('profile');
+    });
+  }
+
+  /* ---- Sidebar "View all →" buttons on dashboard card ---- */
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-page]');
+    if (btn && btn.tagName === 'BUTTON' && !btn.closest('.modal-overlay')) {
+      e.preventDefault();
+      Router.navigate(btn.dataset.page);
+    }
+  });
 });
-
-
-// Placeholder render functions (to be moved to individual page scripts later)
-
-function renderRepositories() {
-  const container = document.getElementById('repositories-content');
-  container.innerHTML = '<div class="card"><p>Repositories list will go here.</p></div>';
-}
-
-function renderActivity() {
-  const container = document.getElementById('activity-content');
-  container.innerHTML = '<div class="card"><p>Activity feed will go here.</p></div>';
-}
-
-function renderGoals() {
-  const container = document.getElementById('goals-content');
-  container.innerHTML = '<div class="card"><p>Goals tracking will go here.</p></div>';
-}
-
-function renderMentors() {
-  const container = document.getElementById('mentors-content');
-  container.innerHTML = '<div class="card"><p>Mentor review queue will go here.</p></div>';
-}
-
-function renderSettings() {
-  const container = document.getElementById('settings-content');
-  container.innerHTML = '<div class="card"><p>Settings panel will go here.</p></div>';
-}
-
-function renderProfile() {
-  const container = document.getElementById('profile-content');
-  container.innerHTML = '<div class="card"><p>User profile will go here.</p></div>';
-}
