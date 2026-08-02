@@ -29,9 +29,7 @@ app.include_router(webhook_router, prefix="/webhook")
 
 # Mount static files
 app.mount("/css", StaticFiles(directory=os.path.join(STATIC_DIR, "css")), name="css")
-app.mount("/js", StaticFiles(directory=os.path.join(STATIC_DIR, "js")), name="js")
-app.mount("/pages", StaticFiles(directory=os.path.join(STATIC_DIR, "pages")), name="pages")
-app.mount("/components", StaticFiles(directory=os.path.join(STATIC_DIR, "components")), name="components")
+app.mount("/js",  StaticFiles(directory=os.path.join(STATIC_DIR, "js")),  name="js")
 
 @app.get("/")
 async def home():
