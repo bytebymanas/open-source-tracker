@@ -27,9 +27,10 @@ const Router = (() => {
 
     // Breadcrumb
     const TITLES = {
-      dashboard: 'Dashboard', leaderboards: 'Leaderboards', contributors: 'Contributors',
+      dashboard: 'Admin Dashboard', leaderboards: 'Leaderboards', contributors: 'Contributors',
       activity: 'Activity Feed', profile: 'Profile', reviews: 'Mentor Reviews',
       goals: 'Goals', settings: 'Settings',
+      student: 'My Dashboard', mentor: 'Mentor Dashboard', org: 'Organization Overview'
     };
     const titleEl = document.getElementById('header-page-title');
     if (titleEl) titleEl.textContent = TITLES[page] || page;
