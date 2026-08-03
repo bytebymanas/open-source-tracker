@@ -27,44 +27,59 @@
     </div>
 
     <nav class="sidebar-nav" role="navigation" aria-label="Main navigation">
-
-      <button class="nav-item active" data-page="dashboard" id="nav-dashboard" aria-label="Dashboard">
+      <!-- DASHBOARD LINKS -->
+      <button class="nav-item active" data-page="dashboard" id="nav-dashboard" aria-label="Admin Dashboard" data-nav-for="admin">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
         <span>Dashboard</span>
       </button>
 
-      <div class="sidebar-section-label">Contributors</div>
+      <button class="nav-item" data-page="student" id="nav-student" aria-label="My Dashboard" data-nav-for="student">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+        <span>My Dashboard</span>
+      </button>
 
-      <button class="nav-item" data-page="leaderboards" id="nav-leaderboards" aria-label="Leaderboards">
+      <button class="nav-item" data-page="mentor" id="nav-mentor" aria-label="Mentor Dashboard" data-nav-for="mentor">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+        <span>Mentor Dashboard</span>
+      </button>
+
+      <button class="nav-item" data-page="org" id="nav-org" aria-label="Organization Dashboard" data-nav-for="org">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+        <span>Overview</span>
+      </button>
+
+      <div class="sidebar-section-label" data-nav-for="all">Contributors</div>
+
+      <button class="nav-item" data-page="leaderboards" id="nav-leaderboards" aria-label="Leaderboards" data-nav-for="all">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 13h4v7H4zm6-7h4v14h-4zm6 4h4v10h-4z"/></svg>
         <span>Leaderboards</span>
       </button>
 
-      <button class="nav-item" data-page="contributors" id="nav-contributors" aria-label="Contributors">
+      <button class="nav-item" data-page="contributors" id="nav-contributors" aria-label="Contributors" data-nav-for="admin,org">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
         <span>Contributors</span>
       </button>
 
-      <button class="nav-item" data-page="activity" id="nav-activity" aria-label="Activity">
+      <button class="nav-item" data-page="activity" id="nav-activity" aria-label="Activity" data-nav-for="admin,mentor,org">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2.05v2.02c3.95.49 7 3.85 7 7.93 0 3.21-1.81 6-4.5 7.54L13 17v5h5l-1.22-1.22C19.91 19.07 22 15.76 22 12c0-5.18-3.95-9.45-9-9.95zM11 2.05C5.95 2.55 2 6.82 2 12c0 3.76 2.09 7.07 5.22 8.78L6 22h5V2.05zM11 13H8l4.5-8.5V11h3l-4.5 8.5V13z"/></svg>
         <span>Activity</span>
       </button>
 
-      <div class="sidebar-section-label">Reviews</div>
+      <div class="sidebar-section-label" data-nav-for="admin,mentor,student">Reviews</div>
 
-      <button class="nav-item" data-page="reviews" id="nav-reviews" aria-label="Mentor Reviews">
+      <button class="nav-item" data-page="reviews" id="nav-reviews" aria-label="Mentor Reviews" data-nav-for="admin,mentor">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 14v-2.47l6.88-6.88c.2-.2.51-.2.71 0l1.77 1.77c.2.2.2.51 0 .71L8.47 14H6zm12 0h-7.5l2-2H18v2z"/></svg>
         <span>Mentor Reviews</span>
       </button>
 
-      <button class="nav-item" data-page="goals" id="nav-goals" aria-label="Goals">
+      <button class="nav-item" data-page="goals" id="nav-goals" aria-label="Goals" data-nav-for="admin,student,org">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94.63 1.5 1.98 2.63 3.61 2.96V19H7v2h10v-2h-4v-3.1c1.63-.33 2.98-1.46 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z"/></svg>
         <span>Goals</span>
       </button>
 
-      <div class="sidebar-section-label">Platform</div>
+      <div class="sidebar-section-label" data-nav-for="admin,org">Platform</div>
 
-      <button class="nav-item" data-page="settings" id="nav-settings" aria-label="Settings">
+      <button class="nav-item" data-page="settings" id="nav-settings" aria-label="Settings" data-nav-for="admin">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
         <span>Settings</span>
       </button>
@@ -74,10 +89,13 @@
     <div class="sidebar-footer">
       <div class="sidebar-user" id="nav-profile-link" data-page="profile" role="button" tabindex="0" aria-label="View profile">
         <div class="sidebar-avatar-wrap" id="sidebar-avatar">CU</div>
-        <div class="sidebar-user-meta">
-          <div class="sidebar-user-name" id="sidebar-username">CuSOC Admin</div>
-          <div class="sidebar-user-role">Platform</div>
+        <div class="sidebar-user-meta" style="flex:1;">
+          <div class="sidebar-user-name" id="sidebar-username">Guest</div>
+          <div class="sidebar-user-role" id="sidebar-user-role" style="color:var(--c-forest);font-weight:600;">Role</div>
         </div>
+        <button class="btn btn-ghost btn-sm" id="role-switch-btn" aria-label="Switch Role" style="padding:4px;" title="Switch Role">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+        </button>
       </div>
     </div>
   </aside>
@@ -114,7 +132,35 @@
     <!-- Page area -->
     <main class="page-area" role="main">
 
-      <!-- ──────── 1. DASHBOARD ──────── -->
+      <!-- ──────── NEW ROLES DASHBOARDS ──────── -->
+      
+      <section id="page-student" class="page-view" aria-label="Student Dashboard">
+        <div class="page-header page-header-row">
+          <div><h1 class="page-title">My Dashboard</h1><p class="page-subtitle">Your open source contribution summary</p></div>
+        </div>
+        <div class="stats-grid" id="student-stats"></div>
+        <div class="card"><div class="card-header"><div class="card-title">My Recent Activity</div></div><div class="card-body" id="student-activity"></div></div>
+      </section>
+
+      <section id="page-mentor" class="page-view" aria-label="Mentor Dashboard">
+        <div class="page-header page-header-row">
+          <div><h1 class="page-title">Mentor Review Queue</h1><p class="page-subtitle">Pending contributions requiring verification</p></div>
+        </div>
+        <div id="mentor-queue"></div>
+      </section>
+
+      <section id="page-org" class="page-view" aria-label="Organization Dashboard">
+        <div class="page-header page-header-row">
+          <div><h1 class="page-title">Organization Overview</h1><p class="page-subtitle">Platform metrics across all departments</p></div>
+        </div>
+        <div class="stats-grid" id="org-stats"></div>
+        <div class="dashboard-grid">
+          <div class="card"><div class="card-header"><div class="card-title">Department Rankings</div></div><div class="card-body" id="org-departments"></div></div>
+          <div class="card"><div class="card-header"><div class="card-title">Top 10 Contributors</div></div><div class="card-body" id="org-top-contributors"></div></div>
+        </div>
+      </section>
+
+      <!-- ──────── 1. ADMIN DASHBOARD ──────── -->
       <section id="page-dashboard" class="page-view active" aria-label="Dashboard">
         <div class="page-header page-header-row">
           <div>
@@ -406,14 +452,36 @@
   </div>
 </div>
 
+<!-- ═══════ MODAL: Role Picker ═══════ -->
+<div class="modal-overlay" id="modal-role-picker" style="display:none;z-index:9999;" role="dialog" aria-modal="true" aria-labelledby="modal-role-title">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-role-title">CuSOC — Who are you?</span>
+    </div>
+    <div class="modal-body">
+      <p style="margin-bottom:16px;color:var(--t-muted);font-size:var(--fs-sm);">Select your role to load the correct dashboard. (This is a local simulation).</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <button class="btn btn-secondary role-select-btn" data-role="student" style="height:60px;justify-content:center;font-size:var(--fs-md);">🎓 Student</button>
+        <button class="btn btn-secondary role-select-btn" data-role="mentor" style="height:60px;justify-content:center;font-size:var(--fs-md);">👨‍🏫 Mentor</button>
+        <button class="btn btn-secondary role-select-btn" data-role="admin" style="height:60px;justify-content:center;font-size:var(--fs-md);">⚙️ Admin</button>
+        <button class="btn btn-secondary role-select-btn" data-role="org" style="height:60px;justify-content:center;font-size:var(--fs-md);">🏢 Organization</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ═══════ TOAST CONTAINER ═══════ -->
 <div class="toast-container" id="toast-container" aria-live="polite" aria-atomic="false"></div>
 
 <!-- ═══════ SCRIPTS ═══════ -->
+<script src="/js/roles.js"></script>
 <script src="/js/api.js"></script>
 <script src="/js/state.js"></script>
 <script src="/js/router.js"></script>
 <script src="/js/pages/dashboard.js"></script>
+<script src="/js/pages/student.js"></script>
+<script src="/js/pages/mentor.js"></script>
+<script src="/js/pages/org.js"></script>
 <script src="/js/pages/leaderboard.js"></script>
 <script src="/js/pages/contributors.js"></script>
 <script src="/js/pages/profile.js"></script>
