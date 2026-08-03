@@ -51,14 +51,15 @@ async function renderDashboard() {
       const rows = board.slice(0, 8).map((u, i) => {
         const medal = ['🥇','🥈','🥉'][i] || `${i+1}`;
         const rankClass = ['top-1','top-2','top-3'][i] || '';
-        return `<tr style="cursor:pointer;" data-profile="${escHtml(u.github_username)}">
+        const uname = u.username || u.github_username;
+        return `<tr style="cursor:pointer;" data-profile="${escHtml(uname)}">
           <td><span class="rank-num ${rankClass}">${medal}</span></td>
           <td>
             <div class="user-cell">
-              <div class="avatar avatar-sm">${avatarInitials(u.name || u.github_username)}</div>
+              <div class="avatar avatar-sm">${avatarInitials(u.name || uname)}</div>
               <div class="user-cell-info">
-                <div class="user-cell-name">${escHtml(u.name || u.github_username)}</div>
-                <div class="user-cell-sub">@${escHtml(u.github_username)}</div>
+                <div class="user-cell-name">${escHtml(u.name || uname)}</div>
+                <div class="user-cell-sub">@${escHtml(uname)}</div>
               </div>
             </div>
           </td>
@@ -83,11 +84,13 @@ async function renderDashboard() {
     }
 
     // Recent activity panel
-    const activityItems = board.slice(0, 6).map(u => `
+    const activityItems = board.slice(0, 6).map(u => {
+      const uname = u.username || u.github_username;
+      return `
       <div class="activity-item" style="border-radius:0;padding:12px 20px;">
         <div class="activity-dot ${(u.merged_prs || 0) > 0 ? 'pr' : 'issue'}"></div>
         <div class="activity-content">
-          <strong>${escHtml(u.name || u.github_username)}</strong>
+          <strong>${escHtml(u.name || uname)}</strong>
           — ${u.merged_prs || 0} PR${u.merged_prs !== 1 ? 's' : ''}, ${u.issues_closed || 0} issue${u.issues_closed !== 1 ? 's' : ''}
           <div class="activity-meta">Score: ${u.total_score || 0} pts</div>
         </div>

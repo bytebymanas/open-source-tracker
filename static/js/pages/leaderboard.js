@@ -112,15 +112,16 @@ function _renderLbTable() {
     const realRank  = _lbData.indexOf(u) + 1;
     const medal     = ['🥇', '🥈', '🥉'][realRank - 1] || realRank;
     const rankClass = ['top-1', 'top-2', 'top-3'][realRank - 1] || '';
+    const uname = u.username || u.github_username;
     return `
-      <tr style="cursor:pointer;" data-profile="${escHtml(u.github_username)}">
+      <tr style="cursor:pointer;" data-profile="${escHtml(uname)}">
         <td><span class="rank-num ${rankClass}">${medal}</span></td>
         <td>
           <div class="user-cell">
-            <div class="avatar avatar-sm">${avatarInitials(u.name || u.github_username)}</div>
+            <div class="avatar avatar-sm">${avatarInitials(u.name || uname)}</div>
             <div class="user-cell-info">
-              <div class="user-cell-name">${escHtml(u.name || u.github_username)}</div>
-              <div class="user-cell-sub">@${escHtml(u.github_username)}</div>
+              <div class="user-cell-name">${escHtml(u.name || uname)}</div>
+              <div class="user-cell-sub">@${escHtml(uname)}</div>
             </div>
           </div>
         </td>
