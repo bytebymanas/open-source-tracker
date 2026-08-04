@@ -4,12 +4,12 @@
 
 A full-stack web application that aggregates, scores, and visualizes open-source contributions from GitHub for university students and communities.
 
-Built with Python · Flask · SQLite · GitHub REST API · Vanilla JS
+Built with Python · FastAPI · SQLite · GitHub REST API · Vanilla JS
 
 ---
 
 ![Python](https://img.shields.io/badge/Python-3.9%2B-3572A5?style=flat-square&logo=python&logoColor=white)
-![Flask](https://img.shields.io/badge/Flask-3.0-000000?style=flat-square&logo=flask&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.109-009688?style=flat-square&logo=fastapi&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-Database-003B57?style=flat-square&logo=sqlite&logoColor=white)
 ![Tests](https://img.shields.io/badge/Tests-passing-34d399?style=flat-square)
 ![License](https://img.shields.io/badge/License-MIT-f0b429?style=flat-square)
@@ -47,7 +47,7 @@ Universities and student communities often lack a structured way to track open-s
 
 | Layer | Technology |
 | :--- | :--- |
-| Backend | Python 3.9+, Flask 3.0 |
+| Backend | Python 3.9+, FastAPI |
 | Database | SQLite (development) · PostgreSQL-ready (production) |
 | Frontend | HTML5, Vanilla CSS, Vanilla JavaScript |
 | API | GitHub REST API v3 |
@@ -61,7 +61,7 @@ Universities and student communities often lack a structured way to track open-s
 ```
 GitHub REST API
        ↓
- Flask Backend
+ FastAPI Backend
        ↓
  Scoring Engine
        ↓
@@ -159,12 +159,21 @@ GITHUB_TOKEN=ghp_your_personal_access_token_here
 **5. Start the development server**
 
 ```bash
-PYTHONPATH=. python3 src/main.py
+uvicorn src.main:app --host 127.0.0.1 --port 5000 --reload
 ```
 
 Open **[http://127.0.0.1:5000](http://127.0.0.1:5000)** in your browser.
 
 > **macOS users:** Use `127.0.0.1:5000` instead of `localhost:5000` — AirPlay can occupy port 5000 on the `localhost` alias.
+
+### Running with Docker
+
+You can easily run the application using Docker and Docker Compose.
+
+```bash
+docker-compose up --build
+```
+The app will be available at `http://127.0.0.1:5000`.
 
 ---
 
@@ -228,10 +237,10 @@ GitHub Actions automatically runs the full test suite on every push and pull req
 
 - [ ] OAuth Authentication
 - [ ] PostgreSQL Support
-- [ ] Docker Deployment
-- [ ] Admin Dashboard
+- [x] Docker Deployment
+- [x] Admin Dashboard
 - [ ] Contribution Trends & Analytics
-- [ ] Organization-level Leaderboards
+- [x] Organization-level Leaderboards
 - [ ] PDF Portfolio Export
 - [ ] Dark / Light Theme Toggle
 
@@ -251,7 +260,7 @@ Contributions are welcome. To get started:
 ## Acknowledgements
 
 - [GitHub REST API](https://docs.github.com/en/rest)
-- [Flask](https://flask.palletsprojects.com)
+- [FastAPI](https://fastapi.tiangolo.com)
 - [Python](https://python.org)
 - The open-source community
 
