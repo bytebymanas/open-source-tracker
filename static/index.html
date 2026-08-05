@@ -93,8 +93,8 @@
           <div class="sidebar-user-name" id="sidebar-username">Guest</div>
           <div class="sidebar-user-role" id="sidebar-user-role" style="color:var(--c-forest);font-weight:600;">Role</div>
         </div>
-        <button class="btn btn-ghost btn-sm" id="role-switch-btn" aria-label="Switch Role" style="padding:4px;" title="Switch Role">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+        <button class="btn btn-ghost btn-sm" id="role-switch-btn" aria-label="Log Out" style="padding:4px;" title="Log Out">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
         </button>
       </div>
     </div>
@@ -452,20 +452,18 @@
   </div>
 </div>
 
-<!-- ═══════ MODAL: Role Picker ═══════ -->
-<div class="modal-overlay" id="modal-role-picker" style="display:none;z-index:9999;" role="dialog" aria-modal="true" aria-labelledby="modal-role-title">
-  <div class="modal" style="max-width:440px;">
-    <div class="modal-header">
-      <span class="modal-title" id="modal-role-title">CuSOC — Who are you?</span>
-    </div>
-    <div class="modal-body">
-      <p style="margin-bottom:16px;color:var(--t-muted);font-size:var(--fs-sm);">Select your role to load the correct dashboard. (This is a local simulation).</p>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-        <button class="btn btn-secondary role-select-btn" data-role="student" style="height:60px;justify-content:center;font-size:var(--fs-md);">🎓 Student</button>
-        <button class="btn btn-secondary role-select-btn" data-role="mentor" style="height:60px;justify-content:center;font-size:var(--fs-md);">👨‍🏫 Mentor</button>
-        <button class="btn btn-secondary role-select-btn" data-role="admin" style="height:60px;justify-content:center;font-size:var(--fs-md);">⚙️ Admin</button>
-        <button class="btn btn-secondary role-select-btn" data-role="org" style="height:60px;justify-content:center;font-size:var(--fs-md);">🏢 Organization</button>
-      </div>
+<!-- ═══════ MODAL: Auth Login ═══════ -->
+<div class="modal-overlay" id="modal-auth-login" style="display:none;z-index:9999;" role="dialog" aria-modal="true" aria-labelledby="modal-auth-title">
+  <div class="modal" style="max-width:400px;text-align:center;">
+    <div class="modal-body" style="padding:40px 24px;">
+      <svg viewBox="0 0 24 24" fill="currentColor" style="width:48px;height:48px;margin:0 auto 16px;color:var(--c-primary);">
+        <path d="M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.45-1.15-1.11-1.46-1.11-1.46-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0012 2z"/>
+      </svg>
+      <h2 id="modal-auth-title" style="margin:0 0 8px;font-size:20px;">Welcome to CuSOC</h2>
+      <p style="margin:0 0 24px;color:var(--t-muted);font-size:var(--fs-sm);">Sign in with GitHub to access your dashboard, review queue, or admin tools.</p>
+      <a href="/api/auth/github/login" class="btn btn-primary" style="width:100%;justify-content:center;height:44px;font-size:var(--fs-md);">
+        Sign in with GitHub
+      </a>
     </div>
   </div>
 </div>

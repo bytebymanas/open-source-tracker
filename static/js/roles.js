@@ -9,32 +9,49 @@ const ROLES = {
   org:     { name: 'Organization', icon: '🏢', defaultPage: 'org' }
 };
 
-let currentRole = localStorage.getItem('cusoc_role');
+let currentRole = null;
+let currentUser = null;
 
-function initRoles() {
-  if (!currentRole || !ROLES[currentRole]) {
-    openModal('modal-role-picker');
-  } else {
+async function initRoles() {
+  try {
+    const user = await API.authMe();
+    currentUser = user;
+    currentRole = user.role;
+    
+    // Update user info in sidebar
+    const nameEl = document.querySelector('.sidebar-user-name');
+    const roleEl = document.getElementById('sidebar-user-role');
+    const avatarEl = document.querySelector('.sidebar-user .avatar');
+    
+    if (nameEl) nameEl.textContent = user.name;
+    if (roleEl) roleEl.textContent = ROLES[currentRole]?.name || currentRole;
+    if (avatarEl) {
+      avatarEl.innerHTML = `<img src="${user.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+    }
+    
     applyRole(currentRole);
+    
+    // We only route to default page if we are at root, otherwise we might be deep linked
+    if (location.hash === '' || location.hash === '#') {
+      Router.navigate(ROLES[currentRole]?.defaultPage || 'dashboard');
+    }
+  } catch (err) {
+    if (err.status === 401) {
+      // Not authenticated, show login modal
+      openModal('modal-auth-login');
+    } else {
+      console.error("Failed to check auth state:", err);
+    }
   }
 
-  // Bind role picker modal buttons
-  document.querySelectorAll('.role-select-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const role = btn.dataset.role;
-      if (ROLES[role]) {
-        currentRole = role;
-        localStorage.setItem('cusoc_role', role);
-        closeModal('modal-role-picker');
-        applyRole(role);
-        Router.navigate(ROLES[role].defaultPage);
-      }
-    });
-  });
-
-  // Bind sidebar role switcher
-  document.getElementById('role-switch-btn')?.addEventListener('click', () => {
-    openModal('modal-role-picker');
+  // Bind logout button
+  document.getElementById('role-switch-btn')?.addEventListener('click', async () => {
+    try {
+      await API.logout();
+      window.location.reload();
+    } catch (err) {
+      console.error("Logout failed:", err);
+    }
   });
 }
 
@@ -42,10 +59,6 @@ function applyRole(roleKey) {
   const role = ROLES[roleKey];
   if (!role) return;
 
-  // Update sidebar user metadata
-  const roleLabel = document.getElementById('sidebar-user-role');
-  if (roleLabel) roleLabel.textContent = role.name;
-  
   // Show/hide navigation items based on role
   document.querySelectorAll('[data-nav-for]').forEach(el => {
     if (el.dataset.navFor.split(',').includes(roleKey) || el.dataset.navFor === 'all') {

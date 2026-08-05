@@ -42,5 +42,7 @@ const API = (() => {
     rateLimit:       ()          => get('/ratelimit'),
     weights:         ()          => get('/settings/weights'),
     updateWeights:   (body)      => postRaw('/settings/weights', body),
+    authMe:          ()          => get('/auth/me'),
+    logout:          ()          => post('/auth/logout', {}),
   };
 })();
