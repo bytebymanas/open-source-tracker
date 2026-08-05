@@ -23,6 +23,8 @@ from src.api.github_api import GitHubAPI, GitHubAPIError
 from src.models.database import Database
 from src.utils.scoring import ScoringEngine
 from src.utils.cache import default_cache
+from src.api.auth import require_admin, require_mentor_or_admin
+from fastapi import Depends
 import logging
 
 logger = logging.getLogger(__name__)
@@ -420,7 +422,7 @@ def get_annotations(contribution_id):
     return JSONResponse(status_code=200, content={"contribution_id": contribution_id, "annotations": annotations})
 
 @router.post("/contributions/{contribution_id}/annotations")
-def add_annotation(contribution_id: int, body: dict = Body(default={})):
+def add_annotation(contribution_id: int, body: dict = Body(default={}), user: dict = Depends(require_mentor_or_admin)):
     """
     Add a mentor annotation to a specific contribution.
     Requires JSON payload: { "mentor_username": str, "note": str (optional), "verified": int (0 or 1), "score_override": int (optional) }
@@ -566,7 +568,7 @@ def list_students():
 
 
 @router.post("/students/import")
-def import_students(body: dict = Body(default={})):
+def import_students(body: dict = Body(default={}), user: dict = Depends(require_admin)):
     """
     POST /api/students/import
     Body: {"usernames": ["user1", "user2", ...]}
@@ -627,7 +629,7 @@ def import_students(body: dict = Body(default={})):
 
 
 @router.patch("/students/{username}")
-def update_student(username: str, body: dict = Body(default={})):
+def update_student(username: str, body: dict = Body(default={}), user: dict = Depends(require_admin)):
     """
     PATCH /api/students/{username}
     Body: {"department": "CSE", "university": "Chandigarh University"}
@@ -648,7 +650,7 @@ def update_student(username: str, body: dict = Body(default={})):
 
 
 @router.delete("/students/{username}")
-def delete_student(username):
+def delete_student(username, user: dict = Depends(require_admin)):
     """
     DELETE /api/students/{username}
     Remove a student and all their data from the tracker.
@@ -693,7 +695,7 @@ def list_annotations(request: Request):
 
 
 @router.patch("/annotations/{annotation_id}")
-def update_annotation(annotation_id: int, body: dict = Body(default={})):
+def update_annotation(annotation_id: int, body: dict = Body(default={}), user: dict = Depends(require_mentor_or_admin)):
     """
     PATCH /api/annotations/{id}
     Body: {"note": "...", "verified": 1, "score_override": 8}
@@ -715,7 +717,7 @@ def update_annotation(annotation_id: int, body: dict = Body(default={})):
 
 
 @router.delete("/annotations/{annotation_id}")
-def delete_annotation(annotation_id):
+def delete_annotation(annotation_id, user: dict = Depends(require_mentor_or_admin)):
     """
     DELETE /api/annotations/{id}
     Remove a mentor annotation.
@@ -748,7 +750,7 @@ def get_weights():
 
 
 @router.post("/settings/weights")
-def update_weights(body: dict = Body(default={})):
+def update_weights(body: dict = Body(default={}), user: dict = Depends(require_admin)):
     """
     POST /api/settings/weights
     Body: {"pr_points": 12, "issue_points": 4, ...}
