@@ -16,11 +16,16 @@ from src.main import app
 from fastapi.testclient import TestClient
 
 
+from src.api.auth import require_admin, require_mentor_or_admin
+
 @pytest.fixture
 def client():
     # app.config["TESTING"] = True
+    app.dependency_overrides[require_admin] = lambda: {"username": "testadmin", "role": "admin"}
+    app.dependency_overrides[require_mentor_or_admin] = lambda: {"username": "testmentor", "role": "mentor"}
     with TestClient(app) as c:
         yield c
+    app.dependency_overrides.clear()
 
 
 class TestGetWeights:
