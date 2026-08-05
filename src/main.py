@@ -14,6 +14,7 @@ from fastapi.responses import FileResponse
 
 from src.api.routes import router as api_router
 from src.api.webhook import router as webhook_router
+from src.api.auth import router as auth_router
 
 # Load environment variables from .env if present
 load_dotenv()
@@ -24,6 +25,7 @@ STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
 app = FastAPI(title="CuSOC Tracker API")
 
 # Register routers
+app.include_router(auth_router, prefix="/api/auth")
 app.include_router(api_router, prefix="/api")
 app.include_router(webhook_router, prefix="/webhook")
 
