@@ -70,6 +70,7 @@ class Database:
             avatar_url      TEXT,
             department      TEXT,
             university      TEXT,
+            role            TEXT    DEFAULT 'student',
             is_active       INTEGER DEFAULT 1,
             created_at      TEXT    DEFAULT (datetime('now')),
             last_synced_at  TEXT
@@ -127,6 +128,14 @@ class Database:
         """
         conn = self._connect()
         conn.executescript(schema)
+        
+        # Migration: Add role column if it doesn't exist
+        try:
+            conn.execute("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'student'")
+            logger.info("Migrated schema: Added role column to users table")
+        except sqlite3.OperationalError:
+            pass # Column already exists
+            
         conn.commit()
         # Do not close in-memory connections — they would lose all data.
         if self._conn is None:
@@ -139,7 +148,7 @@ class Database:
     # ------------------------------------------------------------------
 
     def upsert_user(self, github_username, github_id=None, name=None,
-                    avatar_url=None, department=None, university=None):
+                    avatar_url=None, department=None, university=None, role=None):
         """
         Insert a new user or update an existing one by github_username.
 
@@ -150,22 +159,25 @@ class Database:
             avatar_url (str): Avatar image URL
             department (str): University department
             university (str): University name
+            role (str): User role (student, mentor, admin, org)
 
         Returns:
             int: Internal user ID
         """
+        # We only update role if explicitly provided, to avoid downgrading an admin to student
         sql = """
-        INSERT INTO users (github_username, github_id, name, avatar_url, department, university, last_synced_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO users (github_username, github_id, name, avatar_url, department, university, role, last_synced_at)
+        VALUES (?, ?, ?, ?, ?, ?, COALESCE(?, 'student'), ?)
         ON CONFLICT(github_username) DO UPDATE SET
             github_id       = excluded.github_id,
             name            = excluded.name,
             avatar_url      = excluded.avatar_url,
+            role            = COALESCE(?, users.role),
             last_synced_at  = excluded.last_synced_at
         """
         now = datetime.utcnow().isoformat()
         with self._connect() as conn:
-            cursor = conn.execute(sql, (github_username, github_id, name, avatar_url, department, university, now))
+            cursor = conn.execute(sql, (github_username, github_id, name, avatar_url, department, university, role, now, role))
             conn.commit()
             if cursor.lastrowid:
                 return cursor.lastrowid
@@ -404,6 +416,7 @@ class Database:
             u.avatar_url,
             u.department,
             u.university,
+            u.role,
             u.created_at,
             u.last_synced_at,
             COALESCE(s.total_score,  0) AS total_score,
